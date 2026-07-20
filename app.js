@@ -23,7 +23,7 @@ window.stateMemory = {
     settings: { colorWarState: "inactive", hideColorWarScoreboard: false, hideColorWarCounselor: false },
     sorting: { column: 'name', ascending: true },
     activeScroller: false,
-    scrollerLoops: [],
+    scrollerRAF: null,
     activeCamperId: null,
     pendingRegisterNfcToken: null,
     awaitingAdminCard: false
@@ -99,7 +99,10 @@ window.router = function(viewId) {
     const btnNav = document.getElementById(`btn-nav-${viewId}`) || document.getElementById(`nav-${viewId}`);
     if (btnNav) btnNav.classList.add('active');
 
-    if (viewId !== 'scoreboard') killScrollIntervals();
+    const mainEl = document.querySelector('main');
+    if (mainEl) mainEl.classList.toggle('fullscreen', viewId === 'scoreboard');
+
+    if (viewId !== 'scoreboard') stopEndlessScroller();
 
     if (viewId === 'scoreboard') generateLiveScoreboard();
     if (viewId === 'spread') generateSpreadsheetLedger();
@@ -334,6 +337,8 @@ function generateLiveScoreboard() {
     const title = document.getElementById('dynamic-progress-title');
 
     if (!tbody || !container) return;
+    const wasScrolling = stateMemory.activeScroller;
+    if (wasScrolling) stopEndlessScroller();
     tbody.innerHTML = '';
     container.innerHTML = '';
 
@@ -408,6 +413,17 @@ function generateLiveScoreboard() {
             `;
             container.appendChild(div);
         });
+    }
+    
+    // Initialize endless scrolling for both panels regardless of auto-scrolling state
+    const panels = [
+        document.getElementById('panel-campers'),
+        document.getElementById('panel-progress')
+    ];
+    panels.forEach(initEndlessScroller);
+
+    if (wasScrolling) {
+        startEndlessScroller();
     }
 }
 
@@ -840,7 +856,7 @@ window.emergencyEndColorWar = async function() {
 function startClock() {
     setInterval(() => {
         const target = document.getElementById('live-clock');
-        if (target) target.innerText = `זמן: ${new Date().toLocaleTimeString()}`;
+        if (target) target.innerText = `${new Date().toLocaleTimeString()}`;
     }, 1000);
 }
 
@@ -853,29 +869,118 @@ function setupInteractionTriggers() {
     });
 }
 
+// --- ENDLESS SCROLL ---
 function toggleScrollLoop() {
     stateMemory.activeScroller = !stateMemory.activeScroller;
-    killScrollIntervals();
-    const ind = document.getElementById('scroll-status-msg');
-    if (ind) ind.innerText = stateMemory.activeScroller ? "Auto-scroll: ON" : "Ctrl+J or Right-Click to toggle auto-scroll";
     if (stateMemory.activeScroller) {
-        stateMemory.scrollerLoops.push(runScrollCycle(document.getElementById('panel-campers')));
-        stateMemory.scrollerLoops.push(runScrollCycle(document.getElementById('panel-progress')));
+        startEndlessScroller();
+    } else {
+        stopEndlessScroller();
     }
 }
 
-function runScrollCycle(el) {
-    if (!el) return null;
-    return setInterval(() => {
-        el.scrollTop += 1;
-        if (el.scrollTop >= (el.scrollHeight - el.clientHeight - 1)) el.scrollTop = 0;
-    }, 25);
+function startEndlessScroller() {
+    const panels = [
+        document.getElementById('panel-campers'),
+        document.getElementById('panel-progress')
+    ];
+    
+    panels.forEach(initEndlessScroller);
+    
+    if (stateMemory.scrollerRAF) cancelAnimationFrame(stateMemory.scrollerRAF);
+    
+    let lastTime = performance.now();
+    const scrollSpeed = 35; // Pixels per second
+    
+    const scrollStep = (currentTime) => {
+        if (!stateMemory.activeScroller) return;
+        
+        const deltaTime = (currentTime - lastTime) / 1000;
+        lastTime = currentTime;
+        
+        panels.forEach(el => {
+            if (el) {
+                el.scrollTop += scrollSpeed * deltaTime;
+            }
+        });
+        
+        stateMemory.scrollerRAF = requestAnimationFrame(scrollStep);
+    };
+    
+    stateMemory.scrollerRAF = requestAnimationFrame(scrollStep);
 }
 
-function killScrollIntervals() {
-    stateMemory.scrollerLoops.forEach(clearInterval);
-    stateMemory.scrollerLoops = [];
+function stopEndlessScroller() {
+    stateMemory.activeScroller = false;
+    if (stateMemory.scrollerRAF) {
+        cancelAnimationFrame(stateMemory.scrollerRAF);
+        stateMemory.scrollerRAF = null;
+    }
 }
+
+function initEndlessScroller(el) {
+    if (!el) return;
+    // For tables, use tbody. For other containers, use the specified box or the element itself.
+    const content = el.querySelector('tbody') || el.querySelector('#dynamic-progress-render-box') || el;
+    if (!content) return;
+
+    // 1. Clear existing clones
+    el.querySelectorAll('[data-scroll-clone]').forEach(c => c.remove());
+    
+    // 2. Measure original height
+    let originalHeight = content.scrollHeight;
+    if (originalHeight <= 5) return; 
+
+    const originalItems = Array.from(content.children);
+    const containerHeight = el.offsetHeight;
+
+    // 3. If original content is shorter than container, multiply it so it overflows
+    while (originalHeight < containerHeight && originalItems.length > 0) {
+        originalItems.forEach(item => {
+            const clone = item.cloneNode(true);
+            clone.dataset.scrollClone = 'true';
+            content.appendChild(clone);
+        });
+        originalHeight = content.scrollHeight;
+    }
+
+    // Now 'originalHeight' is the height of one "full set" that is at least container-sized.
+    const fullSetItems = Array.from(content.children);
+
+    // 4. Create the [Before][Main][After] structure for seamless looping
+    fullSetItems.forEach(item => {
+        const clone = item.cloneNode(true);
+        clone.dataset.scrollClone = 'true';
+        content.appendChild(clone);
+    });
+    
+    fullSetItems.slice().reverse().forEach(item => {
+        const clone = item.cloneNode(true);
+        clone.dataset.scrollClone = 'true';
+        content.insertBefore(clone, content.firstChild);
+    });
+
+    // Capture the final single set height after all clones are added
+    setTimeout(() => {
+        // Recalculate if needed, but originalHeight is usually fine
+        const setHeight = originalHeight;
+        el.dataset.loopHeight = setHeight;
+
+        // 5. Initialize position to the start of the "Main" set
+        el.scrollTop = setHeight;
+
+        // 6. Handle the seamless jump
+        el.onscroll = () => {
+            const h = parseFloat(el.dataset.loopHeight);
+            if (el.scrollTop >= h * 2) {
+                el.scrollTop -= h;
+            } else if (el.scrollTop <= 0) {
+                el.scrollTop += h;
+            }
+        };
+    }, 0);
+}
+
 
 // --- NAV AUTO-FADE ON COMPUTERS (cursor idle 20s) ---
 function setupNavAutoFade() {
