@@ -27,29 +27,29 @@
             </div>
         </section>
 
-        <section id="view-scoreboard" class="view">
+        <section id="view-scoreboard" class="view" dir="rtl">
             <div class="scoreboard-header">
-                <h1 id="live-clock">Time: --:--:--</h1>
-                <span id="scroll-status-msg">Ctrl+J or Right-Click to toggle auto-scroll</span>
+                <h1 id="live-clock">זמן: --:--:--</h1>
+                <span id="scroll-status-msg">Ctrl+J או קליק ימני - גלילה אוטומטית</span>
             </div>
             <div class="split-viewport">
                 <div class="panel scrollable" id="panel-campers">
-                    <h2>Camper Points</h2>
+                    <h2>נקודות חניכים</h2>
                     <table>
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Bunk</th>
-                                <th>Duch</th>
-                                <th>Tanya</th>
-                                <th>Mishnayos</th>
+                                <th>שם</th>
+                                <th>בית</th>
+                                <th>דו"ח</th>
+                                <th>תניא</th>
+                                <th>משניות</th>
                             </tr>
                         </thead>
                         <tbody id="scoreboard-table-rows"></tbody>
                     </table>
                 </div>
                 <div class="panel scrollable" id="panel-progress">
-                    <h2 id="dynamic-progress-title">Bunk Progress</h2>
+                    <h2 id="dynamic-progress-title">התקדמות בתים</h2>
                     <div id="dynamic-progress-render-box"></div>
                 </div>
             </div>
@@ -104,6 +104,9 @@
                     </form>
                 </div>
                 <div class="card">
+                    <h2>My Totals</h2>
+                    <div id="camper-totals-box"></div>
+                    <div class="divider"></div>
                     <h2>Bunk Totals</h2>
                     <div id="bunk-aggregates-box"></div>
                 </div>
@@ -147,10 +150,6 @@
                             <p style="font-size:13px; color:#64748b; margin-bottom:15px;">Add a new camper to the system.</p>
                             <form onsubmit="createNewCamperAccount(event)">
                                 <div class="form-field">
-                                    <label>Login ID</label>
-                                    <input type="text" id="new-camper-id" placeholder="e.g., c_chaim_l">
-                                </div>
-                                <div class="form-field">
                                     <label>Camper's NFC Card</label>
                                     <div style="display: flex; gap: 10px;">
                                         <button type="button" class="action-btn secondary-btn" id="btn-register-nfc" onclick="bindNFCTagToRegistrationFlow()">📟 Scan Card</button>
@@ -165,10 +164,6 @@
                                     <label>Bunk</label>
                                     <input type="text" id="new-camper-bunk" required placeholder="e.g., Bunk G12">
                                 </div>
-                                <div class="form-field">
-                                    <label>Password (optional)</label>
-                                    <input type="password" id="new-camper-pass" placeholder="Defaults to 12345 if empty.">
-                                </div>
                                 <button class="action-btn success-btn" type="submit">Add Camper</button>
                             </form>
                         </div>
@@ -177,7 +172,7 @@
                     <div id="pane-profile-edit" class="admin-subpane">
                         <div class="card">
                             <h3>👤 Edit Camper</h3>
-                            <p style="font-size:13px; color:#64748b; margin-bottom:15px;">Change names, bunks, points, or passwords.</p>
+                            <p style="font-size:13px; color:#64748b; margin-bottom:15px;">Change names, bunks, or points.</p>
                             <div class="form-field">
                                 <label>Choose a camper</label>
                                 <select id="admin-camper-selector" onchange="loadCamperIntoProfileEditor(this.value)">
@@ -191,7 +186,6 @@
                                 <div class="form-field"><label>Duch</label><input type="number" id="edit-c-duch"></div>
                                 <div class="form-field"><label>Tanya</label><input type="number" id="edit-c-tanya"></div>
                                 <div class="form-field"><label>Mishnayos</label><input type="number" id="edit-c-mishnayos"></div>
-                                <div class="form-field"><label>Password</label><input type="password" id="edit-c-pass" placeholder="•••••"></div>
                                 <div class="form-field">
                                     <label>Replace Card</label>
                                     <div style="display: flex; gap: 10px;">
@@ -238,7 +232,6 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Login ID</th>
                             <th onclick="toggleDataSorting('name')">Name ↕</th>
                             <th onclick="toggleDataSorting('bunk')">Bunk ↕</th>
                             <th onclick="toggleDataSorting('duch')">Duch ↕</th>

@@ -177,30 +177,13 @@ function handleAdminCardScan(key) {
         return;
     }
 
-    if (stateMemory.awaitingAdminCard) {
-        if (!isAdminLoggedIn()) {
-            stateMemory.awaitingAdminCard = false;
-            alert("Admin card detected. Please sign in as admin first to authorize this device.");
-            return;
-        }
-        markDeviceAuthorized();
-        stateMemory.awaitingAdminCard = false;
-        if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
-        refreshDeviceAuthStatus();
-        const btn = document.getElementById('btn-authorize-device');
-        if (btn) { btn.disabled = false; btn.innerText = "📡 Authorize This Device"; }
-        alert("This device is now authorized! Camper cards can be used here.");
-        return;
-    }
-
-    if (isAdminLoggedIn()) {
-        markDeviceAuthorized();
-        if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
-        refreshDeviceAuthStatus();
-        alert("This device is now authorized! Camper cards can be used here.");
-    } else {
-        alert("Admin card detected. Please sign in as admin first to authorize this device.");
-    }
+    markDeviceAuthorized();
+    stateMemory.awaitingAdminCard = false;
+    if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+    refreshDeviceAuthStatus();
+    const btn = document.getElementById('btn-authorize-device');
+    if (btn) { btn.disabled = false; btn.innerText = "📡 Authorize This Device"; }
+    alert("This device is now authorized! Camper cards can be used here.");
 }
 
 function handleCamperCardScan(camperId) {
@@ -362,12 +345,12 @@ function generateLiveScoreboard() {
             const team = stateMemory.teams.find(t => t.id === c.teamId);
             if (team) tr.style.borderLeft = `8px solid var(--${team.color})`;
         }
-        tr.innerHTML = `<td>${c.name || 'Unknown'}</td><td>${c.bunk || 'Unassigned'}</td><td>${c.duch || 0}</td><td>${c.tanya || 0}</td><td>${c.mishnayos || 0}</td>`;
+        tr.innerHTML = `<td>${c.name || 'לא ידוע'}</td><td>${c.bunk || 'ללא בית'}</td><td>${c.duch || 0}</td><td>${c.tanya || 0}</td><td>${c.mishnayos || 0}</td>`;
         tbody.appendChild(tr);
     });
 
     if (showColorWarData) {
-        title.innerText = "🏆 Color War Standings";
+        title.innerText = "🏆 ניקוד מערכה";
         stateMemory.teams.forEach(t => {
             let cwTanya = 0, cwMish = 0;
             stateMemory.campers.filter(c => c.teamId === t.id).forEach(c => {
@@ -379,11 +362,11 @@ function generateLiveScoreboard() {
             const div = document.createElement('div');
             div.className = 'card';
             div.style.borderTop = `6px solid var(--${t.color})`;
-            div.innerHTML = `<h3>Team ${t.name}</h3><p style="font-size:24px; margin:5px 0;"><strong>${score.toFixed(1)} Pts</strong></p><small>Tanya: ${cwTanya} | Mishnayos: ${cwMish}</small>`;
+            div.innerHTML = `<h3>קבוצה ${t.name}</h3><p style="font-size:24px; margin:5px 0;"><strong>${score.toFixed(1)} נקודות</strong></p><small>תניא: ${cwTanya} | משניות: ${cwMish}</small>`;
             container.appendChild(div);
         });
     } else {
-        title.innerText = "Bunk Progress";
+        title.innerText = "התקדמות בתים";
         const uniqueBunks = [...new Set(stateMemory.campers.map(c => c.bunk))].filter(Boolean);
         let maxVal = 1;
 
@@ -407,17 +390,17 @@ function generateLiveScoreboard() {
                 <strong>${b.name}</strong>
                 <div class="metric-bars-row">
                     <div class="metric-bar-col">
-                        <span class="metric-bar-label">Duch</span>
+                        <span class="metric-bar-label">דו"ח</span>
                         <div class="progress-channel-bg"><div class="progress-fill fill-duch" style="width: ${(b.duch/maxVal)*100}%"></div></div>
                         <span class="metric-bar-value">${b.duch}</span>
                     </div>
                     <div class="metric-bar-col">
-                        <span class="metric-bar-label">Tanya</span>
+                        <span class="metric-bar-label">תניא</span>
                         <div class="progress-channel-bg"><div class="progress-fill fill-tanya" style="width: ${(b.tanya/maxVal)*100}%"></div></div>
                         <span class="metric-bar-value">${b.tanya}</span>
                     </div>
                     <div class="metric-bar-col">
-                        <span class="metric-bar-label">Mishnayos</span>
+                        <span class="metric-bar-label">משניות</span>
                         <div class="progress-channel-bg"><div class="progress-fill fill-mishnayos" style="width: ${(b.mishnayos/maxVal)*100}%"></div></div>
                         <span class="metric-bar-value">${b.mishnayos}</span>
                     </div>
@@ -445,6 +428,15 @@ function generateCounselorDashboard() {
         }
     } else {
         strip.classList.add('hidden');
+    }
+
+    const camperBox = document.getElementById('camper-totals-box');
+    if (camperBox) {
+        camperBox.innerHTML = `
+            <p>Tanya: <strong>${activeCamper.tanya || 0}</strong></p><br>
+            <p>Mishnayos: <strong>${activeCamper.mishnayos || 0}</strong></p><br>
+            <p>Duch: <strong>${activeCamper.duch || 0}</strong></p>
+        `;
     }
 
     const peers = stateMemory.campers.filter(c => c.bunk === activeCamper.bunk);
@@ -496,15 +488,22 @@ window.bindNFCTagToRegistrationFlow = async function() {
 // --- ADD NEW CAMPER ---
 window.createNewCamperAccount = async function(e) {
     e.preventDefault();
-    const inputId = document.getElementById('new-camper-id').value.trim();
     const name = document.getElementById('new-camper-name').value.trim();
     const bunk = document.getElementById('new-camper-bunk').value.trim();
-    const pin = document.getElementById('new-camper-pass').value.trim();
 
-    const chosenIdentifierKey = stateMemory.pendingRegisterNfcToken || inputId;
+    let chosenIdentifierKey = stateMemory.pendingRegisterNfcToken;
+    if (!chosenIdentifierKey) {
+        const baseId = name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        chosenIdentifierKey = baseId;
+        let suffix = 0;
+        while (stateMemory.campers.some(c => c.id === chosenIdentifierKey)) {
+            suffix++;
+            chosenIdentifierKey = baseId + '_' + suffix;
+        }
+    }
 
     if (!chosenIdentifierKey) {
-        alert("Enter a Login ID or scan a card first.");
+        alert("Enter a camper name or scan a card first.");
         return;
     }
 
@@ -512,7 +511,7 @@ window.createNewCamperAccount = async function(e) {
         await setDoc(doc(db, "campers", chosenIdentifierKey.toLowerCase()), {
             name: name,
             bunk: bunk,
-            password: pin || "12345",
+            password: "12345",
             duch: 0,
             tanya: 0,
             mishnayos: 0,
@@ -520,12 +519,10 @@ window.createNewCamperAccount = async function(e) {
             cwBaseTanya: 0,
             cwBaseMish: 0
         });
-        alert(`Camper added! Login ID: ${chosenIdentifierKey.toLowerCase()}`);
+        alert(`Camper added! Login username: ${chosenIdentifierKey.toLowerCase()}`);
 
-        document.getElementById('new-camper-id').value = '';
         document.getElementById('new-camper-name').value = '';
         document.getElementById('new-camper-bunk').value = '';
-        document.getElementById('new-camper-pass').value = '';
         stateMemory.pendingRegisterNfcToken = null;
 
         const displayEl = document.getElementById('new-camper-nfc-token');
@@ -552,7 +549,6 @@ window.loadCamperIntoProfileEditor = function(camperId) {
     document.getElementById('edit-c-duch').value = camper.duch || 0;
     document.getElementById('edit-c-tanya').value = camper.tanya || 0;
     document.getElementById('edit-c-mishnayos').value = camper.mishnayos || 0;
-    document.getElementById('edit-c-pass').value = camper.password || '12345';
 
     area.classList.remove('hidden');
 };
@@ -567,8 +563,7 @@ window.saveCamperProfileEdits = async function() {
             bunk: document.getElementById('edit-c-bunk').value.trim(),
             duch: parseInt(document.getElementById('edit-c-duch').value) || 0,
             tanya: parseInt(document.getElementById('edit-c-tanya').value) || 0,
-            mishnayos: parseInt(document.getElementById('edit-c-mishnayos').value) || 0,
-            password: document.getElementById('edit-c-pass').value.trim()
+            mishnayos: parseInt(document.getElementById('edit-c-mishnayos').value) || 0
         });
         alert("Saved!");
     } catch(err) { console.error(err); }
@@ -637,7 +632,7 @@ function populateCamperDropdowns() {
     adminSel.innerHTML = '<option value="">-- Choose a camper to edit --</option>';
 
     stateMemory.campers.forEach(c => {
-        const str = `<option value="${c.id}">${c.name || 'Unknown'} [${c.id}] (${c.bunk || 'No bunk'})</option>`;
+        const str = `<option value="${c.id}">${c.name || 'Unknown'} (${c.bunk || 'No bunk'})</option>`;
         adminSel.insertAdjacentHTML('beforeend', str);
     });
 
@@ -678,13 +673,12 @@ function generateSpreadsheetLedger() {
             currentCategoryNode = c[col];
             const sepRow = document.createElement('tr');
             sepRow.className = 'category-split-header';
-            sepRow.innerHTML = `<td colspan="7">${col === 'bunk' ? (currentCategoryNode || 'No Bunk') : 'Team: ' + (currentCategoryNode || 'No Team')}</td>`;
+            sepRow.innerHTML = `<td colspan="6">${col === 'bunk' ? (currentCategoryNode || 'No Bunk') : 'Team: ' + (currentCategoryNode || 'No Team')}</td>`;
             tbody.appendChild(sepRow);
         }
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td style="background: #f1f5f9; font-family: monospace; font-weight: bold; color: #475569;">${c.id}</td>
             <td><input type="text" value="${c.name || ''}" onchange="mutateStorageCell('${c.id}', 'name', this.value)"></td>
             <td><input type="text" value="${c.bunk || ''}" onchange="mutateStorageCell('${c.id}', 'bunk', this.value)"></td>
             <td><input type="number" value="${c.duch || 0}" onchange="mutateStorageCell('${c.id}', 'duch', this.value)"></td>
@@ -846,7 +840,7 @@ window.emergencyEndColorWar = async function() {
 function startClock() {
     setInterval(() => {
         const target = document.getElementById('live-clock');
-        if (target) target.innerText = `Time: ${new Date().toLocaleTimeString()}`;
+        if (target) target.innerText = `זמן: ${new Date().toLocaleTimeString()}`;
     }, 1000);
 }
 

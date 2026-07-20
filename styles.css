@@ -63,6 +63,15 @@ input:focus, select:focus { border-color: var(--primary-color); box-shadow: 0 0 
 .scrollable { height: calc(100vh - 210px); min-height: 450px; overflow-y: auto; background: #ffffff; border: 1px solid var(--border-line); border-radius: 12px; padding: 20px; }
 .scrollable h2 { border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 15px; font-size: 20px; }
 
+/* Scoreboard camper points table: always fills container, proportional columns */
+#panel-campers table { width: 100%; min-width: 0; table-layout: fixed; }
+#panel-campers th:nth-child(1), #panel-campers td:nth-child(1) { width: 38%; }
+#panel-campers th:nth-child(2), #panel-campers td:nth-child(2) { width: 22%; }
+#panel-campers th:nth-child(3), #panel-campers td:nth-child(3) { width: 13%; }
+#panel-campers th:nth-child(4), #panel-campers td:nth-child(4) { width: 13%; }
+#panel-campers th:nth-child(5), #panel-campers td:nth-child(5) { width: 14%; }
+#panel-campers td { word-break: break-word; }
+
 /* Interactive Table spreadsheet layouts component metrics structural configurations */
 .sheet-wrapper { overflow-x: auto; padding: 0; border: 1px solid var(--border-line); }
 table { width: 100%; border-collapse: collapse; text-align: left; min-width: 800px; }
