@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Machane Moshiach Central Operations Portal</title>
+    <title>Machane Moshiach Camp Portal</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,45 +11,45 @@
     <nav id="app-nav">
         <button onclick="router('index')" id="btn-nav-index">Home</button>
         <button onclick="router('scoreboard')" id="btn-nav-scoreboard">Live Scoreboard</button>
-        <button onclick="router('login')" id="btn-nav-login">Login Gateway</button>
+        <button onclick="router('login')" id="btn-nav-login">Login</button>
         <button onclick="router('addlines')" id="nav-counselor" class="hidden">Add Lines</button>
-        <button onclick="router('admin')" id="nav-admin" class="hidden">Admin Engine</button>
-        <button onclick="router('spread')" id="nav-spread" class="hidden">Camp Ledger Spreadsheet</button>
+        <button onclick="router('admin')" id="nav-admin" class="hidden">Admin</button>
+        <button onclick="router('spread')" id="nav-spread" class="hidden">Spreadsheet</button>
     </nav>
 
     <main>
         <section id="view-index" class="view active">
             <div class="card text-center-wrapper">
-                <h1>Machane Moshiach Ledger Engine</h1>
-                <p>Welcome to the unified terminal tracking environment. Authenticate via the secure password gateway or launch the public live broadcast board below.</p>
+                <h1>Machane Moshiach</h1>
+                <p>Welcome! Sign in to add lines, or open the live scoreboard below.</p>
                 <div class="divider"></div>
-                <button class="action-btn" onclick="router('scoreboard')">Launch Public Live Scoreboard Display</button>
+                <button class="action-btn" onclick="router('scoreboard')">Open Scoreboard</button>
             </div>
         </section>
 
         <section id="view-scoreboard" class="view">
             <div class="scoreboard-header">
                 <h1 id="live-clock">Time: --:--:--</h1>
-                <span id="scroll-status-msg">[Ctrl+J or Right-Click anywhere to toggle infinite layout scrolling]</span>
+                <span id="scroll-status-msg">Ctrl+J or Right-Click to toggle auto-scroll</span>
             </div>
             <div class="split-viewport">
                 <div class="panel scrollable" id="panel-campers">
-                    <h2>Campers Point Standings</h2>
+                    <h2>Camper Points</h2>
                     <table>
                         <thead>
                             <tr>
-                                <th>Full Camper Name</th>
+                                <th>Name</th>
                                 <th>Bunk</th>
                                 <th>Duch</th>
-                                <th>Tanya Lines</th>
-                                <th>Mishnayos Lines</th>
+                                <th>Tanya</th>
+                                <th>Mishnayos</th>
                             </tr>
                         </thead>
                         <tbody id="scoreboard-table-rows"></tbody>
                     </table>
                 </div>
                 <div class="panel scrollable" id="panel-progress">
-                    <h2 id="dynamic-progress-title">Bunk Progress Tracker</h2>
+                    <h2 id="dynamic-progress-title">Bunk Progress</h2>
                     <div id="dynamic-progress-render-box"></div>
                 </div>
             </div>
@@ -57,24 +57,24 @@
 
         <section id="view-login" class="view">
             <div class="card card-center">
-                <h2>Security Gateway Sign-In</h2>
-                <p style="font-size:13px; color:#64748b; margin-bottom:15px; text-align:center;">Log in with your administrator account or your personal camper username and password.</p>
+                <h2>Sign In</h2>
+                <p style="font-size:13px; color:#64748b; margin-bottom:15px; text-align:center;">Log in as admin or with your camper username and password.</p>
                 
                 <div id="nfc-login-radar-box" style="background: #eff6ff; border: 2px dashed #3b82f6; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
                     <div style="font-size: 28px; margin-bottom: 8px;">📡</div>
-                    <strong style="color: #1d4ed8; display: block; font-size: 15px;">NFC Proximity Probing Active</strong>
-                    <p style="font-size: 13px; color: #1e40af; margin-top: 4px;">Tap your assigned camp badge card directly onto the back of this device to sign in instantly.</p>
+                    <strong style="color: #1d4ed8; display: block; font-size: 15px;">Scanning for card...</strong>
+                    <p style="font-size: 13px; color: #1e40af; margin-top: 4px;">Tap your camp card on the back of this device to sign in.</p>
                 </div>
 
                 <div class="form-field">
-                    <label>Username / Unique Camper ID</label>
-                    <input type="text" id="input-username" placeholder="e.g., admin or c_chaim_l">
+                    <label>Username</label>
+                    <input type="text" id="input-username" placeholder="admin or your camper ID">
                 </div>
                 <div class="form-field">
-                    <label>Authorized Personal Password Pin</label>
+                    <label>Password</label>
                     <input type="password" id="input-password" placeholder="•••••">
                 </div>
-                <button class="action-btn" onclick="authenticateUserSession()">Verify System Credentials</button>
+                <button class="action-btn" onclick="authenticateUserSession()">Sign In</button>
             </div>
         </section>
 
@@ -82,29 +82,29 @@
             <div id="colorwar-context-strip" class="hidden"></div>
             <div class="split-viewport">
                 <div class="card interactive-surface" style="position: relative;">
-                    <div id="submit-blocker-overlay" class="hidden">Lockout Activated: Transmitting Record Securely To Storage Servers...</div>
-                    <h2>Record Learned Quantities Ledger Entry</h2>
-                    <h3 id="focused-camper-label">Selecting Associated Profile Identity...</h3>
-                    <p id="focused-bunk-label">Bunk Context Assignment: --</p>
+                    <div id="submit-blocker-overlay" class="hidden">Saving...</div>
+                    <h2>Add Lines</h2>
+                    <h3 id="focused-camper-label">Choose a camper...</h3>
+                    <p id="focused-bunk-label">Bunk: --</p>
                     <div class="divider"></div>
                     <form onsubmit="commitLineTransaction(event)">
                         <div class="form-field">
-                            <label>Target Measurement Metric Track</label>
+                            <label>What did you learn?</label>
                             <select id="select-metric-type">
-                                <option value="tanya">Tanya (Total Cumulative Lines Memorized)</option>
-                                <option value="mishnayos">Mishnayos (Total Cumulative Lines Memorized)</option>
-                                <option value="duch">Duch Target Achievement Points</option>
+                                <option value="tanya">Tanya</option>
+                                <option value="mishnayos">Mishnayos</option>
+                                <option value="duch">Duch</option>
                             </select>
                         </div>
                         <div class="form-field">
-                            <label>Quantity Aggregated To Append</label>
-                            <input type="number" id="input-metric-qty" min="1" required placeholder="Enter absolute counting quantity integer">
+                            <label>How many?</label>
+                            <input type="number" id="input-metric-qty" min="1" required placeholder="Enter a number">
                         </div>
-                        <button class="action-btn" type="submit" id="form-submit-trigger">Write Entry to Real-Time Cloud Databases</button>
+                        <button class="action-btn" type="submit" id="form-submit-trigger">Save</button>
                     </form>
                 </div>
                 <div class="card">
-                    <h2>Unified Internal Bunk Statistics Summary</h2>
+                    <h2>Bunk Totals</h2>
                     <div id="bunk-aggregates-box"></div>
                 </div>
             </div>
@@ -113,105 +113,114 @@
         <section id="view-admin" class="view">
             <div class="admin-workspace-layout">
                 <aside class="admin-sidebar-menu">
-                    <div class="menu-header">Admin Control Options</div>
-                    <button class="sidebar-tab-btn active" onclick="switchAdminSubWorkspace('pane-welcome')" id="tab-pane-welcome">💼 Panel Dashboard Hub</button>
-                    <button class="sidebar-tab-btn" onclick="switchAdminSubWorkspace('pane-register')" id="tab-pane-register">🆕 Register New Camper</button>
-                    <button class="sidebar-tab-btn" onclick="switchAdminSubWorkspace('pane-profile-edit')" id="tab-pane-profile-edit">👤 Edit Existing Profiles</button>
-                    <button class="sidebar-tab-btn" onclick="switchAdminSubWorkspace('pane-colorwar')" id="tab-pane-colorwar">🔥 2-Day Color War Launcher</button>
-                    <button class="sidebar-tab-btn" onclick="switchAdminSubWorkspace('pane-toggles')" id="tab-pane-toggles">⚙️ View Visibility Flags</button>
+                    <div class="menu-header">Admin Menu</div>
+                    <button class="sidebar-tab-btn active" onclick="switchAdminSubWorkspace('pane-welcome')" id="tab-pane-welcome">💼 Dashboard</button>
+                    <button class="sidebar-tab-btn" onclick="switchAdminSubWorkspace('pane-register')" id="tab-pane-register">🆕 New Camper</button>
+                    <button class="sidebar-tab-btn" onclick="switchAdminSubWorkspace('pane-profile-edit')" id="tab-pane-profile-edit">👤 Edit Campers</button>
+                    <button class="sidebar-tab-btn" onclick="switchAdminSubWorkspace('pane-colorwar')" id="tab-pane-colorwar">🔥 Color War</button>
+                    <button class="sidebar-tab-btn" onclick="switchAdminSubWorkspace('pane-toggles')" id="tab-pane-toggles">⚙️ Settings</button>
                 </aside>
 
                 <div class="admin-content-viewport">
                     
                     <div id="pane-welcome" class="admin-subpane active">
                         <div class="card">
-                            <h2>Administrative Operations Environment</h2>
-                            <p>Select a specialized tracking utility or configuration block from the sidebar options menu to begin managing camp data records.</p>
-                            <div class="divider">QUICK SHORTCUT LINKS</div>
-                            <button class="action-btn secondary-btn" onclick="router('spread')">Launch Operational Spreadsheet Matrix View</button>
+                            <h2>Admin Dashboard</h2>
+                            <p>Pick an option from the menu on the left to manage campers and settings.</p>
+                            <div class="divider">SHORTCUTS</div>
+                            <button class="action-btn secondary-btn" onclick="router('spread')">Open Spreadsheet</button>
+                        </div>
+                        <div class="card">
+                            <h2>Device Authorization</h2>
+                            <p style="font-size:13px; color:#64748b; margin-bottom:15px;">Authorize this device so camper cards can be used here. Scan your Admin Card once per device.</p>
+                            <div id="device-auth-status" style="padding:12px; border-radius:8px; margin-bottom:15px; font-weight:600; text-align:center;"></div>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                <button class="action-btn" id="btn-authorize-device" onclick="authorizeDeviceWithAdminCard()">📡 Authorize This Device</button>
+                                <button class="action-btn secondary-btn" id="btn-program-admin-card" onclick="programAdminCard()">📟 Program Admin Card</button>
+                            </div>
                         </div>
                     </div>
 
                     <div id="pane-register" class="admin-subpane">
                         <div class="card">
-                            <h3>🆕 Register New Camper Profile Record Identity</h3>
-                            <p style="font-size:13px; color:#64748b; margin-bottom:15px;">Creates an isolated system account node inside the database collections layer.</p>
+                            <h3>🆕 Add New Camper</h3>
+                            <p style="font-size:13px; color:#64748b; margin-bottom:15px;">Add a new camper to the system.</p>
                             <form onsubmit="createNewCamperAccount(event)">
                                 <div class="form-field">
-                                    <label>Unique String ID/Username (Used for manual logging in)</label>
+                                    <label>Login ID</label>
                                     <input type="text" id="new-camper-id" placeholder="e.g., c_chaim_l">
                                 </div>
                                 <div class="form-field">
-                                    <label>Physical NFC Transponder Card Alignment</label>
+                                    <label>Camper's NFC Card</label>
                                     <div style="display: flex; gap: 10px;">
-                                        <button type="button" class="action-btn secondary-btn" id="btn-register-nfc" onclick="bindNFCTagToRegistrationFlow()">📟 Assign Card Scan Link</button>
-                                        <input type="text" id="new-camper-nfc-token" placeholder="NFC Status: No Tag Registered" readonly style="background: #f1f5f9; font-weight: bold;">
+                                        <button type="button" class="action-btn secondary-btn" id="btn-register-nfc" onclick="bindNFCTagToRegistrationFlow()">📟 Scan Card</button>
+                                        <input type="text" id="new-camper-nfc-token" placeholder="No card scanned yet" readonly style="background: #f1f5f9; font-weight: bold;">
                                     </div>
                                 </div>
                                 <div class="form-field">
-                                    <label>Camper Legal First and Last Name</label>
+                                    <label>Camper Name</label>
                                     <input type="text" id="new-camper-name" required placeholder="e.g., Chaim Levi">
                                 </div>
                                 <div class="form-field">
-                                    <label>Bunk Group Code Name</label>
+                                    <label>Bunk</label>
                                     <input type="text" id="new-camper-bunk" required placeholder="e.g., Bunk G12">
                                 </div>
                                 <div class="form-field">
-                                    <label>Custom Passphrase Authentication Code</label>
-                                    <input type="password" id="new-camper-pass" placeholder="Default pin defaults to '12345' if left empty.">
+                                    <label>Password (optional)</label>
+                                    <input type="password" id="new-camper-pass" placeholder="Defaults to 12345 if empty.">
                                 </div>
-                                <button class="action-btn success-btn" type="submit">Commit New Record to Cloud Root</button>
+                                <button class="action-btn success-btn" type="submit">Add Camper</button>
                             </form>
                         </div>
                     </div>
 
                     <div id="pane-profile-edit" class="admin-subpane">
                         <div class="card">
-                            <h3>👤 Deep Edit Singular Camper Profile Matrix Data</h3>
-                            <p style="font-size:13px; color:#64748b; margin-bottom:15px;">Modify passwords, points data values, or names across any user account document location.</p>
+                            <h3>👤 Edit Camper</h3>
+                            <p style="font-size:13px; color:#64748b; margin-bottom:15px;">Change names, bunks, points, or passwords.</p>
                             <div class="form-field">
-                                <label>Lookup Target Camper Profile Reference</label>
+                                <label>Choose a camper</label>
                                 <select id="admin-camper-selector" onchange="loadCamperIntoProfileEditor(this.value)">
-                                    <option value="">-- Choose a Profile Document to Edit --</option>
+                                    <option value="">-- Choose a camper to edit --</option>
                                 </select>
                             </div>
                             
                             <div id="profile-editor-form" class="hidden" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-line);">
-                                <div class="form-field"><label>Camper Name String</label><input type="text" id="edit-c-name"></div>
-                                <div class="form-field"><label>Bunk Group String</label><input type="text" id="edit-c-bunk"></div>
-                                <div class="form-field"><label>Duch Points Field</label><input type="number" id="edit-c-duch"></div>
-                                <div class="form-field"><label>Tanya Lines Absolute Total</label><input type="number" id="edit-c-tanya"></div>
-                                <div class="form-field"><label>Mishnayos Lines Absolute Total</label><input type="number" id="edit-c-mishnayos"></div>
-                                <div class="form-field"><label>Override System Log-In Password</label><input type="password" id="edit-c-pass" placeholder="•••••"></div>
+                                <div class="form-field"><label>Name</label><input type="text" id="edit-c-name"></div>
+                                <div class="form-field"><label>Bunk</label><input type="text" id="edit-c-bunk"></div>
+                                <div class="form-field"><label>Duch</label><input type="number" id="edit-c-duch"></div>
+                                <div class="form-field"><label>Tanya</label><input type="number" id="edit-c-tanya"></div>
+                                <div class="form-field"><label>Mishnayos</label><input type="number" id="edit-c-mishnayos"></div>
+                                <div class="form-field"><label>Password</label><input type="password" id="edit-c-pass" placeholder="•••••"></div>
                                 <div class="form-field">
-                                    <label>Overwrite / Replace Current Physical Card Data</label>
+                                    <label>Replace Card</label>
                                     <div style="display: flex; gap: 10px;">
-                                        <button type="button" class="action-btn danger-btn" onclick="wipeAndRewriteActiveCamperCard()">🔥 Purge Old & Rewrite New Card Code</button>
+                                        <button type="button" class="action-btn danger-btn" onclick="wipeAndRewriteActiveCamperCard()">🔥 Write New Card</button>
                                     </div>
                                 </div>
-                                <button class="action-btn" onclick="saveCamperProfileEdits()">Save and Synchronize Profile Changes</button>
-                                <button class="action-btn danger-btn" style="margin-top:12px;" onclick="deleteCamperProfile()">Purge Camper Account from Database Permanently</button>
+                                <button class="action-btn" onclick="saveCamperProfileEdits()">Save</button>
+                                <button class="action-btn danger-btn" style="margin-top:12px;" onclick="deleteCamperProfile()">Delete Camper</button>
                             </div>
                         </div>
                     </div>
 
                     <div id="pane-colorwar" class="admin-subpane">
                         <div class="card" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fca5a5;">
-                            <h2>⚡ 2-DAY COLOR WAR CENTRAL RADAR STATUS HUB</h2>
-                            <p style="margin-bottom:15px;">Manage the entire system state topology. While Color War configuration options remain inactive, all underlying metrics fields, team values, rankings, and scoreboard layouts are hidden from the public board view screen rules.</p>
-                            <button class="action-btn danger-btn" onclick="launchColorWarOrchestratorView()">Initialize Setup Wizard / Dynamic Allocation Dragboard</button>
-                            <button class="action-btn secondary-btn" id="btn-quick-end-cw" onclick="emergencyEndColorWar()" style="display:none; background: #64748b; margin-top:12px;">Deactivate Color War Mode Immediately</button>
+                            <h2>⚡ Color War</h2>
+                            <p style="margin-bottom:15px;">Set up and run a 2-day Color War. When Color War is off, team info is hidden from the scoreboard.</p>
+                            <button class="action-btn danger-btn" onclick="launchColorWarOrchestratorView()">Start Color War Setup</button>
+                            <button class="action-btn secondary-btn" id="btn-quick-end-cw" onclick="emergencyEndColorWar()" style="display:none; background: #64748b; margin-top:12px;">End Color War</button>
                         </div>
                     </div>
 
                     <div id="pane-toggles" class="admin-subpane">
                         <div class="card">
-                            <h3>⚙️ Display Manipulation Policies Configurations</h3>
+                            <h3>⚙️ Display Settings</h3>
                             <label class="checkbox-wrapper" style="margin-bottom: 12px; display: block;">
-                                <input type="checkbox" id="chk-hide-sb" onchange="propagateGlobalSettings()"> Hide Color War Data Blocks on Public Board
+                                <input type="checkbox" id="chk-hide-sb" onchange="propagateGlobalSettings()"> Hide Color War on Scoreboard
                             </label>
                             <label class="checkbox-wrapper" style="display: block;">
-                                <input type="checkbox" id="chk-hide-counselor" onchange="propagateGlobalSettings()"> Mask Color War Interfaces from Counselors
+                                <input type="checkbox" id="chk-hide-counselor" onchange="propagateGlobalSettings()"> Hide Color War from Counselors
                             </label>
                         </div>
                     </div>
@@ -222,20 +231,20 @@
 
         <section id="view-spread" class="view">
             <div class="view-inline-header">
-                <h2>Unified Database Real-Time Batch Ledger Spreadsheet Grid</h2>
-                <button class="action-btn secondary-btn inline-width" onclick="router('admin')">Exit Spreadsheet and Return to Admin Control Center</button>
+                <h2>Camp Spreadsheet</h2>
+                <button class="action-btn secondary-btn inline-width" onclick="router('admin')">Back to Admin</button>
             </div>
             <div class="card sheet-wrapper">
                 <table>
                     <thead>
                         <tr>
-                            <th>Login ID (Use to Sign In)</th>
-                            <th onclick="toggleDataSorting('name')">Name Mapping String ↕</th>
-                            <th onclick="toggleDataSorting('bunk')">Bunk Assigned Node ↕</th>
-                            <th onclick="toggleDataSorting('duch')">Duch Accumulation ↕</th>
-                            <th onclick="toggleDataSorting('tanya')">Tanya Lines Record ↕</th>
-                            <th onclick="toggleDataSorting('mishnayos')">Mishnayos Lines Record ↕</th>
-                            <th onclick="toggleDataSorting('teamId')">Assigned Team Identifier Document Key ↕</th>
+                            <th>Login ID</th>
+                            <th onclick="toggleDataSorting('name')">Name ↕</th>
+                            <th onclick="toggleDataSorting('bunk')">Bunk ↕</th>
+                            <th onclick="toggleDataSorting('duch')">Duch ↕</th>
+                            <th onclick="toggleDataSorting('tanya')">Tanya ↕</th>
+                            <th onclick="toggleDataSorting('mishnayos')">Mishnayos ↕</th>
+                            <th onclick="toggleDataSorting('teamId')">Team ↕</th>
                         </tr>
                     </thead>
                     <tbody id="spreadsheet-matrix-tbody"></tbody>
@@ -245,49 +254,51 @@
 
         <section id="view-setteams" class="view">
             <div class="view-inline-header">
-                <h2>Color War Setup & Orchestration Pipeline</h2>
-                <button class="action-btn secondary-btn inline-width" onclick="router('admin')">Cancel Wizard & Return to Admin Console</button>
+                <h2>Color War Setup</h2>
+                <button class="action-btn secondary-btn inline-width" onclick="router('admin')">Cancel</button>
             </div>
             
             <div id="step-cw-init" class="card">
-                <h3>Phase 1: Freeze Current Ledger Configuration Parameters</h3>
-                <p style="margin: 10px 0 20px 0; color:#475569; font-size:14px; line-height:1.5;">This process safely takes an isolated baseline snapshot of all camper lines in the cloud collections. Points accumulated past this time point scale and translate accurately into active Color War scores without corrupting summer totals.</p>
-                <button class="action-btn danger-btn" onclick="advanceCWPhase('pre')">Transition Database State Matrix to Pre-Color War Status Mode</button>
+                <h3>Step 1: Save Current Points</h3>
+                <p style="margin: 10px 0 20px 0; color:#475569; font-size:14px; line-height:1.5;">This saves a snapshot of everyone's current points. New points earned during Color War will count toward Color War scores without changing summer totals.</p>
+                <button class="action-btn danger-btn" onclick="advanceCWPhase('pre')">Start Color War Setup</button>
             </div>
 
             <div id="step-cw-teams" class="card hidden">
-                <h3>Phase 2: Roster Matrix Blueprint Team Creation</h3>
-                <p style="margin-bottom:15px; font-size:13px; color:#64748b;">Specify active team labels and visual identification color mappings into the registry.</p>
-                <div class="inline-form-group" style="display:flex; gap:10px; margin-bottom:20px;">
-                    <input type="text" id="txt-cw-team-name" placeholder="Enter Team Label (e.g. Team Chessed)">
+                <h3>Step 2: Create Teams</h3>
+                <p style="margin-bottom:15px; font-size:13px; color:#64748b;">Add teams and pick a color for each.</p>
+                <div class="inline-form-group" style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+                    <input type="text" id="txt-cw-team-name" placeholder="Team name (e.g. Team Chessed)">
                     <select id="sel-cw-team-color" style="width:240px;">
-                        <option value="red">Red Team Identity</option>
-                        <option value="blue">Blue Team Identity</option>
-                        <option value="green">Green Team Identity</option>
-                        <option value="yellow">Yellow Team Identity</option>
-                        <option value="orange">Orange Team Identity</option>
+                        <option value="red">Red</option>
+                        <option value="blue">Blue</option>
+                        <option value="green">Green</option>
+                        <option value="yellow">Yellow</option>
+                        <option value="orange">Orange</option>
                     </select>
-                    <button class="action-btn inline-width" onclick="commitTeamToRoster()">Append Team Entity [+]</button>
+                    <button class="action-btn inline-width" onclick="commitTeamToRoster()">Add Team [+]</button>
                 </div>
                 <div id="cw-manifest-display-box" style="margin: 15px 0; font-weight: bold; padding:12px; background:#f1f5f9; border-radius:6px; font-size:14px; color:#334155;"></div>
-                <button class="action-btn" onclick="advanceCWPhase('allocation')">Proceed to Camper Profile Drag-and-Drop Allocation Board</button>
+                <button class="action-btn" onclick="advanceCWPhase('allocation')">Next: Assign Campers</button>
             </div>
 
             <div id="step-cw-alloc" class="card hidden">
-                <h3>Phase 3: Interactive Camper Allocation Matrix Dropzones</h3>
-                <p style="font-size:13px; color:#475569; margin-bottom: 20px;">Drag-and-drop camper records from the unassigned ledger pool down into target team buckets to write their system allocations inside Firestore instantly.</p>
+                <h3>Step 3: Assign Campers to Teams</h3>
+                <p style="font-size:13px; color:#475569; margin-bottom: 20px;">Drag campers from the pool below into a team.</p>
                 
-                <h4 style="margin-bottom:8px; font-size:14px; text-transform:uppercase; color:#64748b; letter-spacing:0.05em;">Unassigned Campers Pool</h4>
+                <h4 style="margin-bottom:8px; font-size:14px; text-transform:uppercase; color:#64748b; letter-spacing:0.05em;">Unassigned Campers</h4>
                 <div class="drag-surface-pool" id="pool-unassigned" ondragover="allowDropAction(event)" ondrop="handleDropAssignment(event, 'unassigned')"></div>
                 
-                <h4 style="margin:25px 0 10px 0; font-size:14px; text-transform:uppercase; color:#64748b; letter-spacing:0.05em;">Target Team Matrix Assignment Nodes</h4>
+                <h4 style="margin:25px 0 10px 0; font-size:14px; text-transform:uppercase; color:#64748b; letter-spacing:0.05em;">Teams</h4>
                 <div class="drop-target-flex-row" id="row-team-dropzones"></div>
                 
-                <div class="divider" style="margin-top:40px;">CRITICAL SYSTEM ACTIVATION SWITCH</div>
-                <button class="action-btn success-btn" style="padding:15px; font-size:18px;" onclick="finalizeAndLaunchColorWar()">🚀 Activate 2-Day Color War Points Engine Live Tracking Network</button>
+                <div class="divider" style="margin-top:40px;">READY?</div>
+                <button class="action-btn success-btn" style="padding:15px; font-size:18px;" onclick="finalizeAndLaunchColorWar()">🚀 Start Color War!</button>
             </div>
         </section>
     </main>
+
+    <div id="nfc-global-status" class="off"><span class="dot"></span><span id="nfc-global-status-text">NFC off</span></div>
 
     <script type="module" src="app.js"></script>
 </body>

@@ -13,7 +13,8 @@
 body { background: var(--app-bg); color: var(--text-main); padding-bottom: 40px; overflow-x: hidden; }
 
 /* Sticky Top Navigation Bar Layout */
-nav { background: #0f172a; padding: 12px 16px; display: flex; gap: 10px; overflow-x: auto; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+nav { background: #0f172a; padding: 12px 16px; display: flex; gap: 10px; overflow-x: auto; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); transition: opacity 0.5s ease, transform 0.5s ease; }
+nav.nav-faded { opacity: 0; pointer-events: none; transform: translateY(-100%); }
 nav::-webkit-scrollbar { display: none; }
 nav button { background: #334155; color: #f8fafc; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; white-space: nowrap; font-weight: 600; font-size: 14px; transition: all 0.2s ease; }
 nav button.active { background: var(--primary-color); box-shadow: inset 0 2px 4px rgba(0,0,0,0.15); }
@@ -84,9 +85,13 @@ td input { padding: 8px; font-size: 14px; border-radius: 4px; border: 1px solid 
 .admin-subpane.active { display: block; animation: fadeIn 0.2s ease; }
 
 /* Dynamic Progress Graph Aggregations and Matrix Containers elements */
-.metric-container { margin-bottom: 20px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9; }
-.metric-container strong { display: block; margin-bottom: 8px; color: #334155; font-size: 14px; }
-.progress-channel-bg { background: #e2e8f0; border-radius: 4px; height: 10px; margin: 6px 0; overflow: hidden; }
+.metric-container { margin-bottom: 20px; padding: 14px; background: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9; }
+.metric-container strong { display: block; margin-bottom: 10px; color: #334155; font-size: 15px; }
+.metric-bars-row { display: flex; gap: 12px; align-items: flex-end; }
+.metric-bar-col { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.metric-bar-label { font-size: 11px; font-weight: 700; color: #64748b; text-align: center; text-transform: uppercase; letter-spacing: 0.04em; }
+.metric-bar-value { font-size: 11px; font-weight: 600; color: #475569; text-align: center; }
+.progress-channel-bg { background: #e2e8f0; border-radius: 4px; height: 10px; margin: 0; overflow: hidden; }
 .progress-fill { height: 100%; width: 0%; border-radius: 4px; transition: width 0.4s ease; }
 .fill-duch { background: #c084fc; }
 .fill-tanya { background: #22d3ee; }
@@ -105,3 +110,35 @@ td input { padding: 8px; font-size: 14px; border-radius: 4px; border: 1px solid 
 .view-inline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Responsive tweaks for small screens */
+@media (max-width: 600px) {
+    main { padding: 16px 10px; }
+    .card { padding: 16px; margin-bottom: 16px; }
+    .card-center { margin: 24px auto; }
+    .text-center-wrapper { padding: 24px 14px; }
+    #live-clock { font-size: 22px; }
+    nav { padding: 8px 10px; gap: 6px; }
+    nav button { padding: 8px 14px; font-size: 13px; }
+    .scoreboard-header { flex-direction: column; align-items: flex-start; }
+    .scrollable { height: auto; min-height: 300px; padding: 14px; }
+    th, td { padding: 10px 10px; font-size: 14px; }
+    .metric-bars-row { gap: 8px; }
+    .metric-bar-label { font-size: 10px; }
+    .admin-sidebar-menu { padding: 12px; }
+    .sidebar-tab-btn { padding: 10px 12px; font-size: 13px; }
+    .view-inline-header { flex-direction: column; align-items: stretch; }
+    .inline-form-group { flex-direction: column; }
+    .inline-form-group select { width: 100% !important; }
+}
+
+/* Subtle NFC scanning status pill (bottom-right corner) */
+#nfc-global-status { position: fixed; bottom: 12px; right: 12px; background: #0f172a; color: #cbd5e1; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 20px; z-index: 200; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 6px; opacity: 0.7; transition: opacity 0.3s ease; cursor: default; }
+#nfc-global-status:hover { opacity: 1; }
+#nfc-global-status .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: nfcPulse 1.5s infinite; }
+#nfc-global-status.off .dot { background: #94a3b8; animation: none; }
+@keyframes nfcPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* Device authorization status box colors */
+.auth-yes { background: #dcfce7 !important; color: #166534 !important; border: 1px solid #86efac; }
+.auth-no { background: #fee2e2 !important; color: #991b1b !important; border: 1px solid #fca5a5; }

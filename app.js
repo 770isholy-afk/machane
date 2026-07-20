@@ -25,10 +25,29 @@ window.stateMemory = {
     activeScroller: false,
     scrollerLoops: [],
     activeCamperId: null,
-    pendingRegisterNfcToken: null
+    pendingRegisterNfcToken: null,
+    awaitingAdminCard: false
 };
 
-// --- INITIALIZE REAL-TIME CLOUD STORAGE STREAM LISTENERS ---
+const ADMIN_CARD_SECRET = "machane-master-admin-2024";
+const DEVICE_AUTH_KEY = "machaneDeviceAuthorized";
+
+function isDeviceAuthorized() {
+    try { return localStorage.getItem(DEVICE_AUTH_KEY) === "true"; }
+    catch (e) { return false; }
+}
+
+function markDeviceAuthorized() {
+    try { localStorage.setItem(DEVICE_AUTH_KEY, "true"); }
+    catch (e) { console.warn("localStorage unavailable", e); }
+}
+
+function isAdminLoggedIn() {
+    const navAdmin = document.getElementById('nav-admin');
+    return navAdmin && !navAdmin.classList.contains('hidden');
+}
+
+// --- REAL-TIME SYNC ---
 function initRealtimeSync() {
     onSnapshot(doc(db, "system", "settings"), (docSnap) => {
         if (docSnap.exists()) {
@@ -70,7 +89,7 @@ function refreshActiveViewData() {
     if (viewId === 'setteams') syncCWWorkflowUI();
 }
 
-// --- APP VIEW ROUTER ENGINE ---
+// --- ROUTER ---
 window.router = function(viewId) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     const target = document.getElementById(`view-${viewId}`);
@@ -81,34 +100,41 @@ window.router = function(viewId) {
     if (btnNav) btnNav.classList.add('active');
 
     if (viewId !== 'scoreboard') killScrollIntervals();
-    
+
     if (viewId === 'scoreboard') generateLiveScoreboard();
     if (viewId === 'spread') generateSpreadsheetLedger();
     if (viewId === 'addlines') generateCounselorDashboard();
     if (viewId === 'setteams') syncCWWorkflowUI();
+    if (viewId === 'admin') refreshDeviceAuthStatus();
 };
 
-// --- ADAPTIVE SUB-MENU PANEL WORKSPACE CONTROLLER SWITCH ---
+// --- ADMIN TAB SWITCH ---
 window.switchAdminSubWorkspace = function(paneId) {
     document.querySelectorAll('.admin-subpane').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.sidebar-tab-btn').forEach(b => b.classList.remove('active'));
-    
+
     const targetPane = document.getElementById(paneId);
     const targetTab = document.getElementById(`tab-${paneId}`);
-    
+
     if (targetPane) targetPane.classList.add('active');
     if (targetTab) targetTab.classList.add('active');
+
+    if (paneId === 'pane-welcome') refreshDeviceAuthStatus();
 };
 
-// --- AUTOMATED BACKGROUND PASSIVE NFC PORTAL LISTENER LOOP ---
+// --- NFC CARD LISTENER (works on every page) ---
 async function startNfcLoginPassiveListener() {
+    const statusPill = document.getElementById('nfc-global-status');
+    const statusText = document.getElementById('nfc-global-status-text');
+
     if (!('NDEFReader' in window)) {
-        console.warn("⚠️ Web NFC hardware standards are unavailable or disabled on this device workspace.");
+        console.warn("Web NFC is not available on this device.");
+        if (statusPill) { statusPill.className = 'off'; if (statusText) statusText.innerText = 'NFC off'; }
         const radar = document.getElementById('nfc-login-radar-box');
         if (radar) {
             radar.style.background = "#fef2f2";
             radar.style.borderColor = "#ef4444";
-            radar.innerHTML = `<strong style="color: #991b1b;">NFC Standard Offline</strong><br><small style="color: #b91c1c;">Please write parameters manually or run from an Android Chrome browser setup.</small>`;
+            radar.innerHTML = `<strong style="color: #991b1b;">NFC not available</strong><br><small style="color: #b91c1c;">Use an Android Chrome browser, or sign in with username and password.</small>`;
         }
         return;
     }
@@ -116,43 +142,87 @@ async function startNfcLoginPassiveListener() {
     try {
         const ndef = new NDEFReader();
         await ndef.scan();
-        console.log("📡 Passive NFC authentication gateway scanner operational.");
+        console.log("NFC scanner is running.");
+        if (statusPill) { statusPill.className = ''; if (statusText) statusText.innerText = 'Scanning'; }
 
         ndef.addEventListener("reading", ({ message }) => {
-            if (!document.getElementById('view-login').classList.contains('active')) return;
-
             for (const record of message.records) {
                 if (record.recordType === "text") {
                     const textDecoder = new TextDecoder();
-                    const rawPayload = textDecoder.decode(record.data);
-                    
+                    const rawPayload = textDecoder.decode(record.data).trim();
+
+                    if (rawPayload.startsWith("machane-admin:")) {
+                        const key = rawPayload.replace("machane-admin:", "").trim();
+                        handleAdminCardScan(key);
+                        break;
+                    }
+
                     if (rawPayload.startsWith("machane-auth:")) {
                         const extractedId = rawPayload.replace("machane-auth:", "").trim();
-                        executeAutomaticNfcLogin(extractedId);
+                        handleCamperCardScan(extractedId);
                         break;
                     }
                 }
             }
         });
     } catch (error) {
-        console.error("❌ Failed to bind active proximity reader framework session context:", error);
+        console.error("NFC scanner failed to start:", error);
+        if (statusPill) { statusPill.className = 'off'; if (statusText) statusText.innerText = 'NFC off'; }
     }
 }
 
-function executeAutomaticNfcLogin(camperId) {
+function handleAdminCardScan(key) {
+    if (key !== ADMIN_CARD_SECRET) {
+        console.warn("Admin card key did not match.");
+        return;
+    }
+
+    if (stateMemory.awaitingAdminCard) {
+        if (!isAdminLoggedIn()) {
+            stateMemory.awaitingAdminCard = false;
+            alert("Admin card detected. Please sign in as admin first to authorize this device.");
+            return;
+        }
+        markDeviceAuthorized();
+        stateMemory.awaitingAdminCard = false;
+        if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+        refreshDeviceAuthStatus();
+        const btn = document.getElementById('btn-authorize-device');
+        if (btn) { btn.disabled = false; btn.innerText = "📡 Authorize This Device"; }
+        alert("This device is now authorized! Camper cards can be used here.");
+        return;
+    }
+
+    if (isAdminLoggedIn()) {
+        markDeviceAuthorized();
+        if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+        refreshDeviceAuthStatus();
+        alert("This device is now authorized! Camper cards can be used here.");
+    } else {
+        alert("Admin card detected. Please sign in as admin first to authorize this device.");
+    }
+}
+
+function handleCamperCardScan(camperId) {
+    if (!isDeviceAuthorized()) {
+        if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
+        alert("This device isn't authorized yet. An admin needs to scan their Admin Card here first.");
+        return;
+    }
+
     const targetProfile = stateMemory.campers.find(c => String(c.id).trim().toLowerCase() === String(camperId).trim().toLowerCase());
-    
+
     if (targetProfile) {
         stateMemory.activeCamperId = targetProfile.id;
         document.getElementById('nav-counselor').classList.remove('hidden');
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
         router('addlines');
     } else {
-        alert("NFC Access Token Rejected: Decoded target reference address does not match entries inside the active registry directory.");
+        alert("This card isn't linked to a camper. Ask an admin to register it.");
     }
 }
 
-// --- SANITIZED MANUAL BACKUP PASSWORD AUTHENTICATION GATEWAY ---
+// --- PASSWORD LOGIN ---
 window.authenticateUserSession = function() {
     const user = document.getElementById('input-username').value.trim().toLowerCase();
     const pass = document.getElementById('input-password').value.trim();
@@ -161,6 +231,7 @@ window.authenticateUserSession = function() {
         document.getElementById('nav-admin').classList.remove('hidden');
         document.getElementById('nav-spread').classList.remove('hidden');
         router('admin');
+        refreshDeviceAuthStatus();
         return;
     }
 
@@ -175,11 +246,79 @@ window.authenticateUserSession = function() {
         document.getElementById('nav-counselor').classList.remove('hidden');
         router('addlines');
     } else {
-        alert("Security Verification Failed: The provided user identity and account password combination is invalid.");
+        alert("Wrong username or password.");
     }
 };
 
-// --- REAL-TIME TRANSACTION QUANTITY FORM INPUT HANDLERS ---
+// --- DEVICE AUTHORIZATION (ADMIN CARD) ---
+window.authorizeDeviceWithAdminCard = async function() {
+    if (!('NDEFReader' in window)) {
+        alert("NFC is not available on this device.");
+        return;
+    }
+
+    if (isDeviceAuthorized()) {
+        alert("This device is already authorized.");
+        return;
+    }
+
+    const btn = document.getElementById('btn-authorize-device');
+    if (btn) { btn.disabled = true; btn.innerText = "⏳ Tap your Admin Card..."; }
+
+    stateMemory.awaitingAdminCard = true;
+
+    try {
+        const ndef = new NDEFReader();
+        await ndef.scan();
+        alert("Hold your Admin Card against the device to authorize it.");
+    } catch (err) {
+        console.error(err);
+        stateMemory.awaitingAdminCard = false;
+        if (btn) { btn.disabled = false; btn.innerText = "📡 Authorize This Device"; }
+        alert("Couldn't start the NFC scanner. Try again.");
+    }
+};
+
+window.programAdminCard = async function() {
+    if (!('NDEFReader' in window)) {
+        alert("NFC is not available on this device.");
+        return;
+    }
+
+    const btn = document.getElementById('btn-program-admin-card');
+    if (btn) { btn.disabled = true; btn.innerText = "⏳ Hold blank card..."; }
+
+    try {
+        const ndef = new NDEFReader();
+        await ndef.scan();
+        alert("Hold a blank card against the device to write the Admin Card.");
+        await ndef.write({
+            records: [{ recordType: "text", data: `machane-admin:${ADMIN_CARD_SECRET}` }]
+        });
+        if (navigator.vibrate) navigator.vibrate(200);
+        alert("Admin Card programmed! Keep this card safe.");
+    } catch (err) {
+        console.error(err);
+        alert("Couldn't write the card. Try again.");
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = "📟 Program Admin Card"; }
+    }
+};
+
+function refreshDeviceAuthStatus() {
+    const box = document.getElementById('device-auth-status');
+    if (!box) return;
+
+    if (isDeviceAuthorized()) {
+        box.className = 'auth-yes';
+        box.innerText = "✅ This device is authorized. Camper cards work here.";
+    } else {
+        box.className = 'auth-no';
+        box.innerText = "⛔ Not authorized yet. Tap \"Authorize This Device\" and scan your Admin Card.";
+    }
+}
+
+// --- ADD LINES FORM ---
 window.commitLineTransaction = async function(e) {
     e.preventDefault();
     const trigger = document.getElementById('form-submit-trigger');
@@ -195,17 +334,17 @@ window.commitLineTransaction = async function(e) {
     try {
         await updateDoc(camperRef, { [type]: increment(value) });
         document.getElementById('input-metric-qty').value = '';
-        alert("Server write successfully synchronized.");
+        alert("Saved!");
     } catch (error) {
         console.error(error);
-        alert("Database execution failed.");
+        alert("Couldn't save. Try again.");
     } finally {
         trigger.disabled = false;
         overlay.classList.add('hidden');
     }
 };
 
-// --- HIGH-PERFORMANCE PUBLIC VIEW DISPLAY REGENERATION ENGINE ---
+// --- LIVE SCOREBOARD ---
 function generateLiveScoreboard() {
     const tbody = document.getElementById('scoreboard-table-rows');
     const container = document.getElementById('dynamic-progress-render-box');
@@ -228,7 +367,7 @@ function generateLiveScoreboard() {
     });
 
     if (showColorWarData) {
-        title.innerText = "🏆 Live Color War Team Standings Matrix";
+        title.innerText = "🏆 Color War Standings";
         stateMemory.teams.forEach(t => {
             let cwTanya = 0, cwMish = 0;
             stateMemory.campers.filter(c => c.teamId === t.id).forEach(c => {
@@ -244,7 +383,7 @@ function generateLiveScoreboard() {
             container.appendChild(div);
         });
     } else {
-        title.innerText = "Bunk Progress Tracker";
+        title.innerText = "Bunk Progress";
         const uniqueBunks = [...new Set(stateMemory.campers.map(c => c.bunk))].filter(Boolean);
         let maxVal = 1;
 
@@ -265,10 +404,24 @@ function generateLiveScoreboard() {
             const div = document.createElement('div');
             div.className = 'metric-container';
             div.innerHTML = `
-                <strong>${b.name} Structural Aggregates</strong>
-                <div class="progress-channel-bg"><div class="progress-fill fill-duch" style="width: ${(b.duch/maxVal)*100}%"></div></div>
-                <div class="progress-channel-bg"><div class="progress-fill fill-tanya" style="width: ${(b.tanya/maxVal)*100}%"></div></div>
-                <div class="progress-channel-bg"><div class="progress-fill fill-mishnayos" style="width: ${(b.mishnayos/maxVal)*100}%"></div></div>
+                <strong>${b.name}</strong>
+                <div class="metric-bars-row">
+                    <div class="metric-bar-col">
+                        <span class="metric-bar-label">Duch</span>
+                        <div class="progress-channel-bg"><div class="progress-fill fill-duch" style="width: ${(b.duch/maxVal)*100}%"></div></div>
+                        <span class="metric-bar-value">${b.duch}</span>
+                    </div>
+                    <div class="metric-bar-col">
+                        <span class="metric-bar-label">Tanya</span>
+                        <div class="progress-channel-bg"><div class="progress-fill fill-tanya" style="width: ${(b.tanya/maxVal)*100}%"></div></div>
+                        <span class="metric-bar-value">${b.tanya}</span>
+                    </div>
+                    <div class="metric-bar-col">
+                        <span class="metric-bar-label">Mishnayos</span>
+                        <div class="progress-channel-bg"><div class="progress-fill fill-mishnayos" style="width: ${(b.mishnayos/maxVal)*100}%"></div></div>
+                        <span class="metric-bar-value">${b.mishnayos}</span>
+                    </div>
+                </div>
             `;
             container.appendChild(div);
         });
@@ -279,15 +432,15 @@ function generateCounselorDashboard() {
     const activeCamper = stateMemory.campers.find(c => c.id === stateMemory.activeCamperId);
     if (!activeCamper) return;
 
-    document.getElementById('focused-camper-label').innerText = `Camper Identity focus: ${activeCamper.name}`;
-    document.getElementById('focused-bunk-label').innerText = `Bunk Context Assignment: ${activeCamper.bunk}`;
+    document.getElementById('focused-camper-label').innerText = `Camper: ${activeCamper.name}`;
+    document.getElementById('focused-bunk-label').innerText = `Bunk: ${activeCamper.bunk}`;
 
     const strip = document.getElementById('colorwar-context-strip');
     if (stateMemory.settings.colorWarState === 'active' && activeCamper.teamId && !stateMemory.settings.hideColorWarCounselor) {
         const team = stateMemory.teams.find(t => t.id === activeCamper.teamId);
         if (team) {
             strip.style.background = `var(--${team.color})`;
-            strip.innerText = `Active Operational Channel: Team ${team.name}`;
+            strip.innerText = `Team ${team.name}`;
             strip.classList.remove('hidden');
         }
     } else {
@@ -296,51 +449,51 @@ function generateCounselorDashboard() {
 
     const peers = stateMemory.campers.filter(c => c.bunk === activeCamper.bunk);
     document.getElementById('bunk-aggregates-box').innerHTML = `
-        <p>Tanya Cumulative Lines: <strong>${peers.reduce((s,c)=>s+(c.tanya || 0), 0)}</strong></p><br>
-        <p>Mishnayos Cumulative Lines: <strong>${peers.reduce((s,c)=>s+(c.mishnayos || 0), 0)}</strong></p><br>
-        <p>Duch Unified Points: <strong>${peers.reduce((s,c)=>s+(c.duch || 0), 0)}</strong></p>
+        <p>Tanya: <strong>${peers.reduce((s,c)=>s+(c.tanya || 0), 0)}</strong></p><br>
+        <p>Mishnayos: <strong>${peers.reduce((s,c)=>s+(c.mishnayos || 0), 0)}</strong></p><br>
+        <p>Duch: <strong>${peers.reduce((s,c)=>s+(c.duch || 0), 0)}</strong></p>
     `;
 }
 
-// --- HARDWARE PAIRING INTEGRATION WRITERS FLOW ---
+// --- NFC CARD WRITING (registration) ---
 window.bindNFCTagToRegistrationFlow = async function() {
     if (!('NDEFReader' in window)) {
-        alert("Web NFC standard protocols are not supported or exposed on this browser window context.");
+        alert("NFC is not available on this device.");
         return;
     }
 
     const btn = document.getElementById('btn-register-nfc');
     const inputDisplay = document.getElementById('new-camper-nfc-token');
-    
+
     btn.disabled = true;
-    btn.innerText = "⏳ Awaiting Device Tap Proximity...";
-    inputDisplay.value = "Status: Probing Hardware Track...";
+    btn.innerText = "⏳ Hold card to write...";
+    inputDisplay.value = "Scanning...";
 
     try {
         const ndef = new NDEFReader();
         await ndef.scan();
-        
+
         const generatedTrackingCode = "m_" + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-        alert("Device Proximity Sensor Hot: Hold unassigned tag against card loop to flash internal storage sectors.");
-        
+        alert("Hold the card against the device to write it.");
+
         await ndef.write({
             records: [{ recordType: "text", data: `machane-auth:${generatedTrackingCode}` }]
         });
 
         stateMemory.pendingRegisterNfcToken = generatedTrackingCode;
         inputDisplay.value = generatedTrackingCode;
-        btn.innerText = "✅ Pairing Bound Successfully";
+        btn.innerText = "✅ Card linked";
         btn.className = "action-btn success-btn";
         if (navigator.vibrate) navigator.vibrate(200);
     } catch (err) {
         console.error(err);
         btn.disabled = false;
-        btn.innerText = "📟 Assign Card Scan Link";
-        inputDisplay.value = "Error: Writing execution failed.";
+        btn.innerText = "📟 Scan Card";
+        inputDisplay.value = "Couldn't write the card.";
     }
 };
 
-// --- INTERACTIVE CAMPER REGISTRATION & DIRECT LOOKUP MANIPULATION ---
+// --- ADD NEW CAMPER ---
 window.createNewCamperAccount = async function(e) {
     e.preventDefault();
     const inputId = document.getElementById('new-camper-id').value.trim();
@@ -351,7 +504,7 @@ window.createNewCamperAccount = async function(e) {
     const chosenIdentifierKey = stateMemory.pendingRegisterNfcToken || inputId;
 
     if (!chosenIdentifierKey) {
-        alert("Please specify a manual text login ID string name OR tap an active card transponder to register properties.");
+        alert("Enter a Login ID or scan a card first.");
         return;
     }
 
@@ -367,22 +520,21 @@ window.createNewCamperAccount = async function(e) {
             cwBaseTanya: 0,
             cwBaseMish: 0
         });
-        alert(`Account configured successfully for lookup identifier reference string: ${chosenIdentifierKey.toLowerCase()}`);
-        
-        // Reset registration element containers to baseline defaults
+        alert(`Camper added! Login ID: ${chosenIdentifierKey.toLowerCase()}`);
+
         document.getElementById('new-camper-id').value = '';
         document.getElementById('new-camper-name').value = '';
         document.getElementById('new-camper-bunk').value = '';
         document.getElementById('new-camper-pass').value = '';
         stateMemory.pendingRegisterNfcToken = null;
-        
+
         const displayEl = document.getElementById('new-camper-nfc-token');
-        if (displayEl) displayEl.value = "NFC Status: No Tag Registered";
-        
+        if (displayEl) displayEl.value = "No card scanned yet";
+
         const nfcBtn = document.getElementById('btn-register-nfc');
         if (nfcBtn) {
             nfcBtn.disabled = false;
-            nfcBtn.innerText = "📟 Assign Card Scan Link";
+            nfcBtn.innerText = "📟 Scan Card";
             nfcBtn.className = "action-btn secondary-btn";
         }
     } catch(err) { console.error(err); }
@@ -418,36 +570,35 @@ window.saveCamperProfileEdits = async function() {
             mishnayos: parseInt(document.getElementById('edit-c-mishnayos').value) || 0,
             password: document.getElementById('edit-c-pass').value.trim()
         });
-        alert("Profile modifications committed successfully.");
+        alert("Saved!");
     } catch(err) { console.error(err); }
 };
 
 window.wipeAndRewriteActiveCamperCard = async function() {
     const selectedCamperId = document.getElementById('admin-camper-selector').value;
     if (!selectedCamperId) {
-        alert("Please choose a target profile matrix item drop node array reference first.");
+        alert("Please choose a camper first.");
         return;
     }
 
     if (!('NDEFReader' in window)) {
-        alert("NFC features are offline on this connection interface client window layout rules engine.");
+        alert("NFC is not available on this device.");
         return;
     }
 
-    if (!confirm("Completely discard any historical chip keys and overwrite this card's validation tokens?")) return;
+    if (!confirm("Write a new card for this camper? The old card will stop working.")) return;
 
     try {
         const ndef = new NDEFReader();
         await ndef.scan();
-        
+
         const reorderedSecureCode = "m_" + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-        alert("Ready to transmit configuration bytes. Touch physical smartcard node tracking strip against device loop.");
-        
+        alert("Hold the new card against the device to write it.");
+
         await ndef.write({
             records: [{ recordType: "text", data: `machane-auth:${reorderedSecureCode}` }]
         });
 
-        // Use a secure atomized operation transaction to shift the baseline document ID mapping layout
         await runTransaction(db, async (transaction) => {
             const oldRef = doc(db, "campers", selectedCamperId);
             const newRef = doc(db, "campers", reorderedSecureCode);
@@ -461,20 +612,20 @@ window.wipeAndRewriteActiveCamperCard = async function() {
 
         document.getElementById('profile-editor-form').classList.add('hidden');
         document.getElementById('admin-camper-selector').value = "";
-        alert("Chip flashed successfully. Old ID parameters dropped and profile database paths rebuilt.");
+        alert("New card written! The old card no longer works.");
         if (navigator.vibrate) navigator.vibrate([150, 100, 150]);
     } catch (err) {
         console.error(err);
-        alert("Flash Error: The connection sequence dropped before properties written could finish streaming.");
+        alert("Couldn't write the card. Try again.");
     }
 };
 
 window.deleteCamperProfile = async function() {
     const id = document.getElementById('admin-camper-selector').value;
-    if (id && confirm("Permanently drop this camper account record link document?")) {
+    if (id && confirm("Delete this camper for good?")) {
         await deleteDoc(doc(db, "campers", id));
         document.getElementById('profile-editor-form').classList.add('hidden');
-        alert("Account purged from database reference layers.");
+        alert("Camper deleted.");
     }
 };
 
@@ -483,17 +634,17 @@ function populateCamperDropdowns() {
     if (!adminSel) return;
 
     const lastAdminSel = adminSel.value;
-    adminSel.innerHTML = '<option value="">-- Choose a Profile Document to Edit --</option>';
+    adminSel.innerHTML = '<option value="">-- Choose a camper to edit --</option>';
 
     stateMemory.campers.forEach(c => {
-        const str = `<option value="${c.id}">${c.name || 'Unknown'} [Login ID: ${c.id}] (${c.bunk || 'Unassigned'})</option>`;
+        const str = `<option value="${c.id}">${c.name || 'Unknown'} [${c.id}] (${c.bunk || 'No bunk'})</option>`;
         adminSel.insertAdjacentHTML('beforeend', str);
     });
 
     adminSel.value = lastAdminSel;
 }
 
-// --- MASTER SPREADSHEET LEDGER MATRIX GRID ENGINE ---
+// --- SPREADSHEET ---
 window.toggleDataSorting = function(col) {
     if (stateMemory.sorting.column === col) {
         stateMemory.sorting.ascending = !stateMemory.sorting.ascending;
@@ -527,7 +678,7 @@ function generateSpreadsheetLedger() {
             currentCategoryNode = c[col];
             const sepRow = document.createElement('tr');
             sepRow.className = 'category-split-header';
-            sepRow.innerHTML = `<td colspan="7">${col === 'bunk' ? (currentCategoryNode || 'No Bunk Assigned') : 'Team Assignment Identifier Node Map: ' + (currentCategoryNode || 'Unallocated Profiles')}</td>`;
+            sepRow.innerHTML = `<td colspan="7">${col === 'bunk' ? (currentCategoryNode || 'No Bunk') : 'Team: ' + (currentCategoryNode || 'No Team')}</td>`;
             tbody.appendChild(sepRow);
         }
 
@@ -561,12 +712,12 @@ window.propagateGlobalSettings = async function() {
     } catch (e) { console.error(e); }
 };
 
-// --- COLOR WAR STEP RUNTIME CALCULATIONS WIZARD ---
+// --- COLOR WAR ---
 window.launchColorWarOrchestratorView = function() { router('setteams'); };
 
 window.advanceCWPhase = async function(phase) {
     if (phase === 'pre') {
-        if (confirm("Freeze data fields and enter Pre-Color War state mapping tracks?")) {
+        if (confirm("Save current points and start Color War setup?")) {
             await setDoc(doc(db, "system", "settings"), {
                 colorWarState: "pre",
                 hideColorWarScoreboard: false,
@@ -574,7 +725,13 @@ window.advanceCWPhase = async function(phase) {
             }, { merge: true });
         }
     } else if (phase === 'allocation') {
-        syncCWWorkflowUI();
+        if (stateMemory.teams.length === 0) {
+            alert("Add at least one team first.");
+            return;
+        }
+        document.getElementById('step-cw-teams').classList.add('hidden');
+        document.getElementById('step-cw-alloc').classList.remove('hidden');
+        renderDragAndDropMatrix();
     }
 };
 
@@ -593,17 +750,22 @@ function syncCWWorkflowUI() {
     const activePhase = stateMemory.settings.colorWarState;
     if (activePhase === 'inactive') return;
 
+    const manifest = document.getElementById('cw-manifest-display-box');
+    if (manifest) manifest.innerText = "Teams: " + (stateMemory.teams.map(t => t.name).join(', ') || 'None');
+
+    const allocStep = document.getElementById('step-cw-alloc');
+    if (allocStep && !allocStep.classList.contains('hidden')) {
+        renderDragAndDropMatrix();
+        return;
+    }
+
+    const teamsStep = document.getElementById('step-cw-teams');
+    if (teamsStep && !teamsStep.classList.contains('hidden')) {
+        return;
+    }
+
     document.getElementById('step-cw-init').classList.add('hidden');
     document.getElementById('step-cw-teams').classList.remove('hidden');
-
-    const manifest = document.getElementById('cw-manifest-display-box');
-    if (manifest) manifest.innerText = "Configured Rosters: " + (stateMemory.teams.map(t => t.name).join(', ') || 'None');
-
-    if (stateMemory.teams.length > 0 && document.getElementById('view-setteams').classList.contains('active')) {
-        document.getElementById('step-cw-teams').classList.add('hidden');
-        document.getElementById('step-cw-alloc').classList.remove('hidden');
-        renderDragAndDropMatrix();
-    }
 }
 
 function renderDragAndDropMatrix() {
@@ -656,7 +818,7 @@ window.handleDropAssignment = async function(e, targetTeamId) {
 };
 
 window.finalizeAndLaunchColorWar = async function() {
-    if (confirm("Confirm system operational activation deployment?")) {
+    if (confirm("Start Color War now?")) {
         const batch = writeBatch(db);
         stateMemory.campers.forEach(c => {
             const ref = doc(db, "campers", c.id);
@@ -666,13 +828,13 @@ window.finalizeAndLaunchColorWar = async function() {
         try {
             await batch.commit();
             router('scoreboard');
-            alert("Color War Calculations Systems Online.");
+            alert("Color War is on!");
         } catch (e) { console.error(e); }
     }
 };
 
 window.emergencyEndColorWar = async function() {
-    if (confirm("Force emergency override shutdown command sequence?")) {
+    if (confirm("End Color War now?")) {
         try {
             await updateDoc(doc(db, "system", "settings"), { colorWarState: "inactive" });
             router('admin');
@@ -680,7 +842,7 @@ window.emergencyEndColorWar = async function() {
     }
 };
 
-// --- AUTO MARQUEE SCREEN SCROLL OVERLAYS CONTROLLERS ---
+// --- AUTO SCROLL ---
 function startClock() {
     setInterval(() => {
         const target = document.getElementById('live-clock');
@@ -701,7 +863,7 @@ function toggleScrollLoop() {
     stateMemory.activeScroller = !stateMemory.activeScroller;
     killScrollIntervals();
     const ind = document.getElementById('scroll-status-msg');
-    if (ind) ind.innerText = stateMemory.activeScroller ? "[Auto Scroll Engine: ACTIVE]" : "[Ctrl+J or Right-Click anywhere to toggle infinite layout scrolling]";
+    if (ind) ind.innerText = stateMemory.activeScroller ? "Auto-scroll: ON" : "Ctrl+J or Right-Click to toggle auto-scroll";
     if (stateMemory.activeScroller) {
         stateMemory.scrollerLoops.push(runScrollCycle(document.getElementById('panel-campers')));
         stateMemory.scrollerLoops.push(runScrollCycle(document.getElementById('panel-progress')));
@@ -721,7 +883,39 @@ function killScrollIntervals() {
     stateMemory.scrollerLoops = [];
 }
 
+// --- NAV AUTO-FADE ON COMPUTERS (cursor idle 20s) ---
+function setupNavAutoFade() {
+    const isComputer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (!isComputer) return;
+
+    const nav = document.getElementById('app-nav');
+    if (!nav) return;
+
+    let idleTimer = null;
+    const FADE_DELAY = 20000;
+
+    function showNav() {
+        nav.classList.remove('nav-faded');
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => nav.classList.add('nav-faded'), FADE_DELAY);
+    }
+
+    document.addEventListener('mousemove', showNav);
+    document.addEventListener('mousedown', showNav);
+    document.addEventListener('keydown', showNav);
+    document.addEventListener('touchstart', showNav);
+
+    nav.addEventListener('mouseenter', () => {
+        if (idleTimer) clearTimeout(idleTimer);
+    });
+    nav.addEventListener('mouseleave', showNav);
+
+    showNav();
+}
+
 startClock();
 setupInteractionTriggers();
+setupNavAutoFade();
 initRealtimeSync();
+refreshDeviceAuthStatus();
 setTimeout(startNfcLoginPassiveListener, 1000);
