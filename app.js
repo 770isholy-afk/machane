@@ -1075,7 +1075,7 @@ function startEndlessScroller() {
     if (stateMemory.scrollerRAF) cancelAnimationFrame(stateMemory.scrollerRAF);
     
     let lastTime = performance.now();
-    const scrollSpeed = 35; // Pixels per second
+    const scrollSpeed = 30; // Pixels per second
     
     const scrollStep = (currentTime) => {
         if (!stateMemory.activeScroller) return;
