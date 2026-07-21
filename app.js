@@ -26,8 +26,21 @@ window.stateMemory = {
     scrollerRAF: null,
     activeCamperId: null,
     pendingRegisterNfcToken: null,
-    awaitingAdminCard: false
+    awaitingAdminCard: false,
+    contextMenuTargetId: null
 };
+
+// Global click listeners to hide context menu
+document.addEventListener('click', () => hideCustomContextMenu());
+document.addEventListener('contextmenu', (e) => {
+    if (!e.target.closest('.excel-table')) hideCustomContextMenu();
+});
+
+function hideCustomContextMenu() {
+    const menu = document.getElementById('custom-context-menu');
+    if (menu) menu.classList.add('hidden');
+    document.querySelectorAll('.excel-table tr').forEach(tr => tr.classList.remove('selected'));
+}
 
 const ADMIN_CARD_SECRET = "machane-master-admin-2024";
 const DEVICE_AUTH_KEY = "machaneDeviceAuthorized";
@@ -668,10 +681,23 @@ window.toggleDataSorting = function(col) {
 
 function generateSpreadsheetLedger() {
     const tbody = document.getElementById('spreadsheet-matrix-tbody');
+    const searchInput = document.getElementById('spreadsheet-search');
     if (!tbody) return;
     tbody.innerHTML = '';
 
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
     let pool = [...stateMemory.campers];
+
+    // Filter by search term
+    if (searchTerm) {
+        pool = pool.filter(c => 
+            (c.name || '').toLowerCase().includes(searchTerm) || 
+            (c.bunk || '').toLowerCase().includes(searchTerm) ||
+            (c.id || '').toLowerCase().includes(searchTerm)
+        );
+    }
+
     const col = stateMemory.sorting.column;
     const dir = stateMemory.sorting.ascending ? 1 : -1;
 
@@ -694,17 +720,176 @@ function generateSpreadsheetLedger() {
         }
 
         const tr = document.createElement('tr');
+        tr.oncontextmenu = (e) => {
+            e.preventDefault();
+            showCustomContextMenu(e, c.id, tr);
+        };
         tr.innerHTML = `
-            <td><input type="text" value="${c.name || ''}" onchange="mutateStorageCell('${c.id}', 'name', this.value)"></td>
-            <td><input type="text" value="${c.bunk || ''}" onchange="mutateStorageCell('${c.id}', 'bunk', this.value)"></td>
-            <td><input type="number" value="${c.duch || 0}" onchange="mutateStorageCell('${c.id}', 'duch', this.value)"></td>
-            <td><input type="number" value="${c.tanya || 0}" onchange="mutateStorageCell('${c.id}', 'tanya', this.value)"></td>
-            <td><input type="number" value="${c.mishnayos || 0}" onchange="mutateStorageCell('${c.id}', 'mishnayos', this.value)"></td>
-            <td><input type="text" value="${c.teamId || ''}" placeholder="None" onchange="mutateStorageCell('${c.id}', 'teamId', this.value)"></td>
+            <td><input type="text" class="sheet-cell" data-col="0" value="${c.name || ''}" onchange="mutateStorageCell('${c.id}', 'name', this.value)" onkeydown="handleSpreadsheetKeydown(event)"></td>
+            <td><input type="text" class="sheet-cell" data-col="1" value="${c.bunk || ''}" onchange="mutateStorageCell('${c.id}', 'bunk', this.value)" onkeydown="handleSpreadsheetKeydown(event)"></td>
+            <td><input type="number" class="sheet-cell" data-col="2" value="${c.duch || 0}" onchange="mutateStorageCell('${c.id}', 'duch', this.value)" onkeydown="handleSpreadsheetKeydown(event)"></td>
+            <td><input type="number" class="sheet-cell" data-col="3" value="${c.tanya || 0}" onchange="mutateStorageCell('${c.id}', 'tanya', this.value)" onkeydown="handleSpreadsheetKeydown(event)"></td>
+            <td><input type="number" class="sheet-cell" data-col="4" value="${c.mishnayos || 0}" onchange="mutateStorageCell('${c.id}', 'mishnayos', this.value)" onkeydown="handleSpreadsheetKeydown(event)"></td>
+            <td><input type="text" class="sheet-cell" data-col="5" value="${c.teamId || ''}" placeholder="None" onchange="mutateStorageCell('${c.id}', 'teamId', this.value)" onkeydown="handleSpreadsheetKeydown(event)"></td>
         `;
         tbody.appendChild(tr);
     });
 }
+
+window.showCustomContextMenu = function(e, id, rowElement) {
+    stateMemory.contextMenuTargetId = id;
+    const menu = document.getElementById('custom-context-menu');
+    
+    // Highlight row
+    document.querySelectorAll('.excel-table tr').forEach(tr => tr.classList.remove('selected'));
+    rowElement.classList.add('selected');
+
+    menu.classList.remove('hidden');
+    
+    // Position menu
+    const menuWidth = menu.offsetWidth || 160;
+    const menuHeight = menu.offsetHeight || 150;
+    let x = e.clientX;
+    let y = e.clientY;
+
+    if (x + menuWidth > window.innerWidth) x -= menuWidth;
+    if (y + menuHeight > window.innerHeight) y -= menuHeight;
+
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+};
+
+window.contextAction = async function(type) {
+    const id = stateMemory.contextMenuTargetId;
+    if (!id) return;
+
+    if (type === 'edit') {
+        router('admin');
+        switchAdminSubWorkspace('pane-profile-edit');
+        const adminSel = document.getElementById('admin-camper-selector');
+        if (adminSel) {
+            adminSel.value = id;
+            loadCamperIntoProfileEditor(id);
+        }
+    } else if (type === 'copy') {
+        try {
+            await navigator.clipboard.writeText(id);
+            alert("ID copied to clipboard!");
+        } catch (err) {
+            console.error('Failed to copy: ', err);
+        }
+    } else if (type === 'delete') {
+        if (confirm("Delete this camper for good?")) {
+            await deleteDoc(doc(db, "campers", id));
+            alert("Camper deleted.");
+        }
+    }
+    hideCustomContextMenu();
+};
+
+window.handleSpreadsheetKeydown = function(e) {
+    const input = e.target;
+    const tr = input.closest('tr');
+    const tbody = tr.parentElement;
+    const rows = Array.from(tbody.querySelectorAll('tr:not(.category-split-header)'));
+    const currentRowIndex = rows.indexOf(tr);
+    const currentColIndex = parseInt(input.dataset.col);
+
+    if (e.key === 'ArrowUp' && currentRowIndex > 0) {
+        e.preventDefault();
+        rows[currentRowIndex - 1].querySelectorAll('.sheet-cell')[currentColIndex].focus();
+    } else if (e.key === 'ArrowDown' && currentRowIndex < rows.length - 1) {
+        e.preventDefault();
+        rows[currentRowIndex + 1].querySelectorAll('.sheet-cell')[currentColIndex].focus();
+    } else if (e.key === 'ArrowLeft' && input.selectionStart === 0) {
+        if (currentColIndex > 0) {
+            e.preventDefault();
+            tr.querySelectorAll('.sheet-cell')[currentColIndex - 1].focus();
+        }
+    } else if (e.key === 'ArrowRight' && input.selectionEnd === input.value.length) {
+        if (currentColIndex < 5) {
+            e.preventDefault();
+            tr.querySelectorAll('.sheet-cell')[currentColIndex + 1].focus();
+        }
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (currentRowIndex < rows.length - 1) {
+            rows[currentRowIndex + 1].querySelectorAll('.sheet-cell')[currentColIndex].focus();
+        }
+    }
+};
+
+window.exportSpreadsheetToCSV = function() {
+    const pool = [...stateMemory.campers];
+    let csvContent = "ID,Name,Bunk,Duch,Tanya,Mishnayos,TeamID\n";
+    
+    pool.forEach(c => {
+        const row = [
+            c.id,
+            `"${(c.name || '').replace(/"/g, '""')}"`,
+            `"${(c.bunk || '').replace(/"/g, '""')}"`,
+            c.duch || 0,
+            c.tanya || 0,
+            c.mishnayos || 0,
+            `"${(c.teamId || '').replace(/"/g, '""')}"`
+        ];
+        csvContent += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `machane_campers_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+window.importSpreadsheetFromCSV = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const text = e.target.result;
+        const rows = text.split('\n').filter(row => row.trim() !== '');
+        const headers = rows[0].split(',');
+
+        if (confirm(`Are you sure you want to import ${rows.length - 1} campers? This may overwrite existing data.`)) {
+            const batch = writeBatch(db);
+            
+            for (let i = 1; i < rows.length; i++) {
+                const values = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // Split by comma not inside quotes
+                const id = values[0].trim();
+                if (!id) continue;
+
+                const data = {
+                    name: (values[1] || "").replace(/^"|"$/g, '').replace(/""/g, '"'),
+                    bunk: (values[2] || "").replace(/^"|"$/g, '').replace(/""/g, '"'),
+                    duch: parseInt(values[3]) || 0,
+                    tanya: parseInt(values[4]) || 0,
+                    mishnayos: parseInt(values[5]) || 0,
+                    teamId: (values[6] || "").replace(/^"|"$/g, '').replace(/""/g, '"').trim() || null
+                };
+
+                const ref = doc(db, "campers", id);
+                batch.set(ref, data, { merge: true });
+            }
+
+            try {
+                await batch.commit();
+                alert("Import successful!");
+            } catch (err) {
+                console.error("Import failed:", err);
+                alert("Import failed. Check console for details.");
+            }
+        }
+        event.target.value = ''; // Reset input
+    };
+    reader.readAsText(file);
+};
 
 window.mutateStorageCell = async function(id, key, val) {
     const ref = doc(db, "campers", id);

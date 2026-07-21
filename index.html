@@ -225,10 +225,16 @@
         <section id="view-spread" class="view">
             <div class="view-inline-header">
                 <h2>Camp Spreadsheet</h2>
-                <button class="action-btn secondary-btn inline-width" onclick="router('admin')">Back to Admin</button>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="text" id="spreadsheet-search" placeholder="Search campers..." oninput="generateSpreadsheetLedger()" style="margin:0; padding:8px 12px; border-radius:6px; border:1px solid var(--border-line); width:200px;">
+                    <button class="action-btn success-btn inline-width" onclick="exportSpreadsheetToCSV()" style="padding: 8px 15px; font-size: 14px;">📥 Export</button>
+                    <button class="action-btn secondary-btn inline-width" onclick="document.getElementById('csv-import-input').click()" style="padding: 8px 15px; font-size: 14px;">📤 Import</button>
+                    <input type="file" id="csv-import-input" accept=".csv" class="hidden" onchange="importSpreadsheetFromCSV(event)">
+                    <button class="action-btn secondary-btn inline-width" onclick="router('admin')" style="padding: 8px 15px; font-size: 14px;">Back</button>
+                </div>
             </div>
-            <div class="card sheet-wrapper">
-                <table>
+            <div class="card sheet-wrapper" style="padding:0; overflow:hidden;">
+                <table class="excel-table">
                     <thead>
                         <tr>
                             <th onclick="toggleDataSorting('name')">Name ↕</th>
@@ -291,6 +297,13 @@
     </main>
 
     <div id="nfc-global-status" class="off"><span class="dot"></span><span id="nfc-global-status-text">NFC off</span></div>
+
+    <div id="custom-context-menu" class="context-menu hidden">
+        <div class="menu-item" onclick="contextAction('edit')">👤 Edit Profile</div>
+        <div class="menu-item" onclick="contextAction('copy')">📋 Copy ID</div>
+        <div class="divider"></div>
+        <div class="menu-item danger" onclick="contextAction('delete')">🗑️ Delete Row</div>
+    </div>
 
     <script type="module" src="app.js"></script>
 </body>
