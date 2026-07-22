@@ -350,8 +350,23 @@ function generateLiveScoreboard() {
     const title = document.getElementById('dynamic-progress-title');
 
     if (!tbody || !container) return;
+
+    const panels = [
+        document.getElementById('panel-campers'),
+        document.getElementById('panel-progress')
+    ];
+
     const wasScrolling = stateMemory.activeScroller;
-    if (wasScrolling) stopEndlessScroller();
+    const preserveStates = panels.map(el => {
+        if (!el) return null;
+        return {
+            scrollTop: el.scrollTop,
+            loopHeight: parseFloat(el.dataset.loopHeight)
+        };
+    });
+
+    // Don't stop it if it's already active, startEndlessScroller will handle RAF cleanup
+    
     tbody.innerHTML = '';
     container.innerHTML = '';
 
@@ -428,15 +443,10 @@ function generateLiveScoreboard() {
         });
     }
     
-    // Initialize endless scrolling for both panels regardless of auto-scrolling state
-    const panels = [
-        document.getElementById('panel-campers'),
-        document.getElementById('panel-progress')
-    ];
-    panels.forEach(initEndlessScroller);
-
     if (wasScrolling) {
-        startEndlessScroller();
+        startEndlessScroller(preserveStates);
+    } else {
+        panels.forEach(el => initEndlessScroller(el));
     }
 }
 
@@ -1039,10 +1049,45 @@ window.emergencyEndColorWar = async function() {
 
 // --- AUTO SCROLL ---
 function startClock() {
-    setInterval(() => {
+    const updateClock = () => {
         const target = document.getElementById('live-clock');
-        if (target) target.innerText = `${new Date().toLocaleTimeString()}`;
-    }, 1000);
+        if (target) {
+            const now = new Date();
+            const hours = now.getHours() % 12 || 12;
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            target.innerHTML = `<span class="hebrew-date">זמן: </span>${hours}:${minutes}:${seconds}`;
+        }
+    };
+
+    updateClock();
+    setInterval(updateClock, 1000);
+}
+
+async function loadHebrewDate() {
+    const target = document.getElementById('hebrew-date');
+    if (!target) return;
+
+    try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const response = await fetch(`https://www.hebcal.com/converter?cfg=json&g2h=1&date=${year}-${month}-${day}`);
+        if (!response.ok) throw new Error('Hebcal request failed');
+
+        const data = await response.json();
+        const display = data.hebrew || '';
+        target.innerText = display ? display.replace(/\s+/g, ' ').trim() : '...';
+    } catch (error) {
+        console.warn('Could not load Hebrew date:', error);
+        target.innerText = '...';
+    }
+}
+
+function initializeHeaderInfo() {
+    startClock();
+    loadHebrewDate();
 }
 
 function setupInteractionTriggers() {
@@ -1064,13 +1109,16 @@ function toggleScrollLoop() {
     }
 }
 
-function startEndlessScroller() {
+function startEndlessScroller(preserveStates = null) {
+    stateMemory.activeScroller = true;
     const panels = [
         document.getElementById('panel-campers'),
         document.getElementById('panel-progress')
     ];
     
-    panels.forEach(initEndlessScroller);
+    panels.forEach((el, idx) => {
+        initEndlessScroller(el, preserveStates ? preserveStates[idx] : null);
+    });
     
     if (stateMemory.scrollerRAF) cancelAnimationFrame(stateMemory.scrollerRAF);
     
@@ -1103,7 +1151,7 @@ function stopEndlessScroller() {
     }
 }
 
-function initEndlessScroller(el) {
+function initEndlessScroller(el, preserveState = null) {
     if (!el) return;
     // For tables, use tbody. For other containers, use the specified box or the element itself.
     const content = el.querySelector('tbody') || el.querySelector('#dynamic-progress-render-box') || el;
@@ -1146,28 +1194,30 @@ function initEndlessScroller(el) {
     });
 
     // Capture the final single set height after all clones are added
-    setTimeout(() => {
-        // Recalculate if needed, but originalHeight is usually fine
-        const setHeight = originalHeight;
-        el.dataset.loopHeight = setHeight;
+    const setHeight = originalHeight;
+    el.dataset.loopHeight = setHeight;
 
-        // 5. Initialize position to the start of the "Main" set
+    // 5. Initialize position
+    if (preserveState && preserveState.loopHeight) {
+        const ratio = preserveState.scrollTop / preserveState.loopHeight;
+        el.scrollTop = ratio * setHeight;
+    } else {
         el.scrollTop = setHeight;
+    }
 
-        // 6. Handle the seamless jump
-        el.onscroll = () => {
-            const h = parseFloat(el.dataset.loopHeight);
-            if (el.scrollTop >= h * 2) {
-                el.scrollTop -= h;
-            } else if (el.scrollTop <= 0) {
-                el.scrollTop += h;
-            }
-        };
-    }, 0);
+    // 6. Handle the seamless jump
+    el.onscroll = () => {
+        const h = parseFloat(el.dataset.loopHeight);
+        if (el.scrollTop >= h * 2) {
+            el.scrollTop -= h;
+        } else if (el.scrollTop <= 0) {
+            el.scrollTop += h;
+        }
+    };
 }
 
 
-// --- NAV AUTO-FADE ON COMPUTERS (cursor idle 20s) ---
+// --- NAV AUTO-FADE ON COMPUTERS (cursor idle 1s) ---
 function setupNavAutoFade() {
     const isComputer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     if (!isComputer) return;
@@ -1176,7 +1226,7 @@ function setupNavAutoFade() {
     if (!nav) return;
 
     let idleTimer = null;
-    const FADE_DELAY = 20000;
+    const FADE_DELAY = 1000;
 
     function showNav() {
         nav.classList.remove('nav-faded');
@@ -1197,7 +1247,7 @@ function setupNavAutoFade() {
     showNav();
 }
 
-startClock();
+initializeHeaderInfo();
 setupInteractionTriggers();
 setupNavAutoFade();
 initRealtimeSync();

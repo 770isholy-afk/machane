@@ -3,6 +3,11 @@
     src: url("/Digital Dismay.otf") format("opentype");
 }
 
+@font-face {
+    font-family: 'Rieim';
+    src: url('OT Rieim-VF.ttf');
+}
+
 :root {
     --primary-color: #055d5e;
     --success-color: #16a34a;
@@ -68,7 +73,7 @@ input:focus, select:focus { border-color: var(--primary-color); box-shadow: 0 0 
 
 #view-scoreboard {     background: url(/bg2.jpg); padding: 15px; }
 .scoreboard-header {    background: url(/bg2blur.png); border-bottom: none; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; 
-    padding: 15px 30px; border-radius: 50px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); border: 4px solid var(--sb-red); flex-wrap: wrap; gap: 12px; }
+    padding: 15px 30px; border-radius: 40px; box-shadow: 0px 6px 1px 4px #d1321cad; border: 4px solid var(--sb-red); flex-wrap: wrap; gap: 12px; }
 .logo-container {
     width: 350px;
     height: 210px;
@@ -110,7 +115,28 @@ input:focus, select:focus { border-color: var(--primary-color); box-shadow: 0 0 
 .logo-back {
     transform: rotateY(180deg);
 }
-#live-clock { padding-inline-start:10px; font-family: "Digital Dismay"; font-size: 48px !important; color: var(--sb-teal); text-shadow: 2px 2px 0px rgba(0,0,0,0.05); }
+
+.hebrew-date, #live-clock {
+    font-size: 72px;
+    font-weight: 700;
+    color: var(--sb-red);
+    text-align: center;
+    min-height: 28px;
+    font-family: 'rieim';
+}
+
+#live-clock { margin: 0 30px; font-family: "Digital Dismay"; font-weight:400;}
+
+
+.scoreboard-header-right {
+        display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    margin-inline-start: auto;
+    padding-inline-start: 12px;
+    justify-content: space-between;
+    width: 100%;
+}
 
 .scrollable { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; background: #ffffff; }
 .scrollable::-webkit-scrollbar { width: 0; display: none; }
@@ -139,7 +165,7 @@ div#dynamic-progress-render-box {
 main.fullscreen { max-width: none; padding-top: 20px; padding-left: 0; padding-right: 0;padding-bottom: 0; }
 body:has(nav.nav-faded) main.fullscreen { padding-top: 0px; }
 
-#view-scoreboard .scoreboard-header { margin-bottom: 10px; padding-bottom: 8px; }
+#view-scoreboard .scoreboard-header { margin-bottom: 20px; padding-bottom: 8px; }
 #view-scoreboard .split-viewport { gap: 12px; }
 @media (min-width: 992px) { #view-scoreboard .split-viewport { grid-template-columns: 3fr 2fr; } }
 #panel-campers table { text-align: start; }
