@@ -71,7 +71,40 @@ input:focus, select:focus { border-color: var(--primary-color); box-shadow: 0 0 
 .split-viewport { display: grid; grid-template-columns: 1fr; grid-auto-rows: 1fr; gap: 24px; flex: 1; min-height: 0; }
 @media (min-width: 992px) { .split-viewport { grid-template-columns: 1fr 1fr; grid-auto-rows: auto; } }
 
-#view-scoreboard {     background: url(/bg2.jpg); padding: 15px; }
+#view-scoreboard {     background: url(/bg2.jpg); padding: 15px; position: relative; }
+.scoreboard-fixed-badge {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 150;
+    padding:4px;
+    color: #ffffff;
+    backdrop-filter:blur(3px);
+    border-radius: 999px;
+    font-size: 37px;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    font-family: 'Rieim', 'Segoe UI', sans-serif;
+}
+.scoreboard-fixed-footer {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 150;
+}
+.scoreboard-fixed-footer-inner {
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--sb-teal);
+    padding: 12px 24px;
+    border-radius: 999px;
+    font-size: 22px;
+    font-weight: 700;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    font-family: 'Rieim', 'Segoe UI', sans-serif;
+    white-space: nowrap;
+}
 .scoreboard-header {    background: url(/bg2blur.png); border-bottom: none; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; 
     padding: 15px 30px; border-radius: 40px; box-shadow: 0px 6px 1px 4px #d1321cad; border: 4px solid var(--sb-red); flex-wrap: wrap; gap: 12px; }
 .logo-container {
@@ -232,6 +265,9 @@ td input { padding: 8px; font-size: 14px; border-radius: 4px; border: 1px solid 
     nav button { padding: 8px 14px; font-size: 13px; }
     .scoreboard-header { flex-direction: column; align-items: flex-start; }
     .scrollable { padding: 14px; }
+    .scoreboard-fixed-badge { top: 16px; right: 16px; font-size: 22px; padding: 6px 12px; }
+    .scoreboard-fixed-footer { bottom: 16px; }
+    .scoreboard-fixed-footer-inner { font-size: 14px; padding: 10px 14px; white-space: normal; max-width: min(90vw, 420px); }
     th, td { padding: 10px 10px; font-size: 14px; }
     .metric-bars-row { gap: 8px; }
     .metric-bar-label { font-size: 10px; }
