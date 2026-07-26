@@ -439,7 +439,7 @@ function generateLiveScoreboard() {
                         <span class="metric-bar-value">${b.mishnayos}</span>
                     </div>
                     <div class="metric-bar-col">
-                        <span class="metric-bar-label">Checks</span>
+                        <span class="metric-bar-label">טשעקס</span>
                         <div class="progress-channel-bg"><div class="progress-fill fill-checks" style="width: ${(b.checks/maxVal)*100}%"></div></div>
                         <span class="metric-bar-value">${b.checks}</span>
                     </div>
@@ -734,7 +734,7 @@ function generateSpreadsheetLedger() {
             currentCategoryNode = c[col];
             const sepRow = document.createElement('tr');
             sepRow.className = 'category-split-header';
-            sepRow.innerHTML = `<td colspan="6">${col === 'bunk' ? (currentCategoryNode || 'No Bunk') : 'Team: ' + (currentCategoryNode || 'No Team')}</td>`;
+            sepRow.innerHTML = `<td colspan="7">${col === 'bunk' ? (currentCategoryNode || 'No Bunk') : 'Team: ' + (currentCategoryNode || 'No Team')}</td>`;
             tbody.appendChild(sepRow);
         }
 
@@ -916,7 +916,15 @@ window.importSpreadsheetFromCSV = function(event) {
 window.mutateStorageCell = async function(id, key, val) {
     const ref = doc(db, "campers", id);
     const parsed = ['duch','tanya','mishnayos','checks'].includes(key) ? (parseInt(val) || 0) : val;
-    try { await updateDoc(ref, { [key]: parsed }); } catch (e) { console.error(e); }
+    try {
+        await updateDoc(ref, { [key]: parsed });
+        // Optimistically update local state so views refresh immediately
+        const idx = stateMemory.campers.findIndex(c => c.id === id);
+        if (idx !== -1) {
+            stateMemory.campers[idx] = { ...stateMemory.campers[idx], [key]: parsed };
+        }
+        refreshActiveViewData();
+    } catch (e) { console.error(e); }
 };
 
 window.propagateGlobalSettings = async function() {

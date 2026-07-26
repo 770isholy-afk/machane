@@ -151,9 +151,11 @@ div#dynamic-progress-render-box {
 #panel-campers table { border-collapse: separate; border-spacing: 0 12px; width: 100%; table-layout: fixed; }
 #panel-campers thead th { background: var(--sb-teal); color: white; padding: 15px; font-size: 22px; text-align: center; }
 #panel-campers thead th:first-child { border-radius: 0px 20px  20px  0px; width: 38%; }
-#panel-campers thead th:nth-child(2) { width: 22%; }
-#panel-campers thead th:nth-child(3) { width: 13%; }
-#panel-campers thead th:nth-child(4) { width: 13%; }
+#panel-campers thead th:nth-child(2) { width: 15%; }
+#panel-campers thead th:nth-child(3) { width: 15%; }
+#panel-campers thead th:nth-child(4) { width: 15%; }
+#panel-campers thead th:nth-child(5) { width: 15%; }
+
 #panel-campers thead th:last-child { border-radius: 20px 0 0 20px; width: 14%; }
 
 #scoreboard-table-rows tr { background: white; filter:drop-shadow(0px 0px 43px #00000059); transition: transform 0.2s ease; cursor: default; }
