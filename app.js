@@ -487,7 +487,8 @@ function generateCounselorDashboard() {
     document.getElementById('bunk-aggregates-box').innerHTML = `
         <p>Tanya: <strong>${peers.reduce((s,c)=>s+(c.tanya || 0), 0)}</strong></p><br>
         <p>Mishnayos: <strong>${peers.reduce((s,c)=>s+(c.mishnayos || 0), 0)}</strong></p><br>
-        <p>Duch: <strong>${peers.reduce((s,c)=>s+(c.duch || 0), 0)}</strong></p>
+        <p>Duch: <strong>${peers.reduce((s,c)=>s+(c.duch || 0), 0)}</strong></p><br>
+        <p>Checks: <strong>${peers.reduce((s,c)=>s+(c.checks || 0), 0)}</strong></p>
     `;
 }
 
@@ -594,6 +595,7 @@ window.loadCamperIntoProfileEditor = function(camperId) {
     document.getElementById('edit-c-duch').value = camper.duch || 0;
     document.getElementById('edit-c-tanya').value = camper.tanya || 0;
     document.getElementById('edit-c-mishnayos').value = camper.mishnayos || 0;
+    document.getElementById('edit-c-checks').value = camper.checks || 0;
 
     area.classList.remove('hidden');
 };
@@ -608,7 +610,8 @@ window.saveCamperProfileEdits = async function() {
             bunk: document.getElementById('edit-c-bunk').value.trim(),
             duch: parseInt(document.getElementById('edit-c-duch').value) || 0,
             tanya: parseInt(document.getElementById('edit-c-tanya').value) || 0,
-            mishnayos: parseInt(document.getElementById('edit-c-mishnayos').value) || 0
+            mishnayos: parseInt(document.getElementById('edit-c-mishnayos').value) || 0,
+            checks: parseInt(document.getElementById('edit-c-checks').value) || 0
         });
         alert("Saved!");
     } catch(err) { console.error(err); }
