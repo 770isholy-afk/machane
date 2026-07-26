@@ -378,8 +378,7 @@ function generateLiveScoreboard() {
             const team = stateMemory.teams.find(t => t.id === c.teamId);
             if (team) tr.style.borderLeft = `8px solid var(--${team.color})`;
         }
-        const points = (Number(c.duch || 0) + Number(c.tanya || 0) + Number(c.mishnayos || 0));
-        tr.innerHTML = `<td>${c.name || 'לא ידוע'}</td><td>${c.bunk || 'ללא בית'}</td><td>${points}</td><td>${c.duch || 0}</td><td>${c.tanya || 0}</td><td>${c.mishnayos || 0}</td>`;
+        tr.innerHTML = `<td>${c.name || 'לא ידוע'}</td><td>${c.bunk || 'ללא בית'}</td><td>${c.duch || 0}</td><td>${c.tanya || 0}</td><td>${c.mishnayos || 0}</td><td>${c.checks || 0}</td>`;
         tbody.appendChild(tr);
     });
 
@@ -410,9 +409,10 @@ function generateLiveScoreboard() {
                 name: b,
                 duch: match.reduce((s, c) => s + (c.duch || 0), 0),
                 tanya: match.reduce((s, c) => s + (c.tanya || 0), 0),
-                mishnayos: match.reduce((s, c) => s + (c.mishnayos || 0), 0)
+                mishnayos: match.reduce((s, c) => s + (c.mishnayos || 0), 0),
+                checks: match.reduce((s, c) => s + (c.checks || 0), 0)
             };
-            const sum = data.duch + data.tanya + data.mishnayos;
+            const sum = data.duch + data.tanya + data.mishnayos + data.checks;
             if (sum > maxVal) maxVal = sum;
             return data;
         });
@@ -437,6 +437,11 @@ function generateLiveScoreboard() {
                         <span class="metric-bar-label">משניות</span>
                         <div class="progress-channel-bg"><div class="progress-fill fill-mishnayos" style="width: ${(b.mishnayos/maxVal)*100}%"></div></div>
                         <span class="metric-bar-value">${b.mishnayos}</span>
+                    </div>
+                    <div class="metric-bar-col">
+                        <span class="metric-bar-label">Checks</span>
+                        <div class="progress-channel-bg"><div class="progress-fill fill-checks" style="width: ${(b.checks/maxVal)*100}%"></div></div>
+                        <span class="metric-bar-value">${b.checks}</span>
                     </div>
                 </div>
             `;
@@ -473,7 +478,8 @@ function generateCounselorDashboard() {
         camperBox.innerHTML = `
             <p>Tanya: <strong>${activeCamper.tanya || 0}</strong></p><br>
             <p>Mishnayos: <strong>${activeCamper.mishnayos || 0}</strong></p><br>
-            <p>Duch: <strong>${activeCamper.duch || 0}</strong></p>
+            <p>Duch: <strong>${activeCamper.duch || 0}</strong></p><br>
+            <p>Checks: <strong>${activeCamper.checks || 0}</strong></p>
         `;
     }
 
@@ -553,6 +559,7 @@ window.createNewCamperAccount = async function(e) {
             duch: 0,
             tanya: 0,
             mishnayos: 0,
+            checks: 0,
             teamId: null,
             cwBaseTanya: 0,
             cwBaseMish: 0
@@ -739,7 +746,8 @@ function generateSpreadsheetLedger() {
             <td><input type="number" class="sheet-cell" data-col="2" value="${c.duch || 0}" onchange="mutateStorageCell('${c.id}', 'duch', this.value)" onkeydown="handleSpreadsheetKeydown(event)"></td>
             <td><input type="number" class="sheet-cell" data-col="3" value="${c.tanya || 0}" onchange="mutateStorageCell('${c.id}', 'tanya', this.value)" onkeydown="handleSpreadsheetKeydown(event)"></td>
             <td><input type="number" class="sheet-cell" data-col="4" value="${c.mishnayos || 0}" onchange="mutateStorageCell('${c.id}', 'mishnayos', this.value)" onkeydown="handleSpreadsheetKeydown(event)"></td>
-            <td><input type="text" class="sheet-cell" data-col="5" value="${c.teamId || ''}" placeholder="None" onchange="mutateStorageCell('${c.id}', 'teamId', this.value)" onkeydown="handleSpreadsheetKeydown(event)"></td>
+            <td><input type="number" class="sheet-cell" data-col="5" value="${c.checks || 0}" onchange="mutateStorageCell('${c.id}', 'checks', this.value)" onkeydown="handleSpreadsheetKeydown(event)"></td>
+            <td><input type="text" class="sheet-cell" data-col="6" value="${c.teamId || ''}" placeholder="None" onchange="mutateStorageCell('${c.id}', 'teamId', this.value)" onkeydown="handleSpreadsheetKeydown(event)"></td>
         `;
         tbody.appendChild(tr);
     });
@@ -816,7 +824,7 @@ window.handleSpreadsheetKeydown = function(e) {
             tr.querySelectorAll('.sheet-cell')[currentColIndex - 1].focus();
         }
     } else if (e.key === 'ArrowRight' && input.selectionEnd === input.value.length) {
-        if (currentColIndex < 5) {
+        if (currentColIndex < 6) {
             e.preventDefault();
             tr.querySelectorAll('.sheet-cell')[currentColIndex + 1].focus();
         }
@@ -830,7 +838,7 @@ window.handleSpreadsheetKeydown = function(e) {
 
 window.exportSpreadsheetToCSV = function() {
     const pool = [...stateMemory.campers];
-    let csvContent = "ID,Name,Bunk,Duch,Tanya,Mishnayos,TeamID\n";
+    let csvContent = "ID,Name,Bunk,Duch,Tanya,Mishnayos,Checks,TeamID\n";
     
     pool.forEach(c => {
         const row = [
@@ -840,6 +848,7 @@ window.exportSpreadsheetToCSV = function() {
             c.duch || 0,
             c.tanya || 0,
             c.mishnayos || 0,
+            c.checks || 0,
             `"${(c.teamId || '').replace(/"/g, '""')}"`
         ];
         csvContent += row.join(",") + "\n";
@@ -880,7 +889,8 @@ window.importSpreadsheetFromCSV = function(event) {
                     duch: parseInt(values[3]) || 0,
                     tanya: parseInt(values[4]) || 0,
                     mishnayos: parseInt(values[5]) || 0,
-                    teamId: (values[6] || "").replace(/^"|"$/g, '').replace(/""/g, '"').trim() || null
+                    checks: parseInt(values[6]) || 0,
+                    teamId: (values[7] || "").replace(/^"|"$/g, '').replace(/""/g, '"').trim() || null
                 };
 
                 const ref = doc(db, "campers", id);
@@ -902,7 +912,7 @@ window.importSpreadsheetFromCSV = function(event) {
 
 window.mutateStorageCell = async function(id, key, val) {
     const ref = doc(db, "campers", id);
-    const parsed = ['duch','tanya','mishnayos'].includes(key) ? (parseInt(val) || 0) : val;
+    const parsed = ['duch','tanya','mishnayos','checks'].includes(key) ? (parseInt(val) || 0) : val;
     try { await updateDoc(ref, { [key]: parsed }); } catch (e) { console.error(e); }
 };
 
