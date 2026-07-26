@@ -378,7 +378,8 @@ function generateLiveScoreboard() {
             const team = stateMemory.teams.find(t => t.id === c.teamId);
             if (team) tr.style.borderLeft = `8px solid var(--${team.color})`;
         }
-        tr.innerHTML = `<td>${c.name || 'לא ידוע'}</td><td>${c.bunk || 'ללא בית'}</td><td>${c.duch || 0}</td><td>${c.tanya || 0}</td><td>${c.mishnayos || 0}</td>`;
+        const points = (Number(c.duch || 0) + Number(c.tanya || 0) + Number(c.mishnayos || 0));
+        tr.innerHTML = `<td>${c.name || 'לא ידוע'}</td><td>${c.bunk || 'ללא בית'}</td><td>${points}</td><td>${c.duch || 0}</td><td>${c.tanya || 0}</td><td>${c.mishnayos || 0}</td>`;
         tbody.appendChild(tr);
     });
 
@@ -443,11 +444,9 @@ function generateLiveScoreboard() {
         });
     }
     
-    if (wasScrolling) {
-        startEndlessScroller(preserveStates);
-    } else {
-        panels.forEach(el => initEndlessScroller(el));
-    }
+    // Always start the endless scroller when the scoreboard is generated
+    // Preserve previous scroll positions when available.
+    startEndlessScroller(preserveStates);
 }
 
 function generateCounselorDashboard() {

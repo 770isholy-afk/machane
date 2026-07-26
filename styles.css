@@ -118,14 +118,14 @@ input:focus, select:focus { border-color: var(--primary-color); box-shadow: 0 0 
 
 .hebrew-date, #live-clock {
     font-size: 72px;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--sb-red);
     text-align: center;
     min-height: 28px;
     font-family: 'rieim';
 }
 
-#live-clock { margin: 0 30px; font-family: "Digital Dismay"; font-weight:400;}
+#live-clock { font-size: 66px;  margin: 0 30px; font-family: "Digital Dismay"; font-weight:400;}
 
 
 .scoreboard-header-right {
@@ -167,7 +167,7 @@ body:has(nav.nav-faded) main.fullscreen { padding-top: 0px; }
 
 #view-scoreboard .scoreboard-header { margin-bottom: 20px; padding-bottom: 8px; }
 #view-scoreboard .split-viewport { gap: 12px; }
-@media (min-width: 992px) { #view-scoreboard .split-viewport { grid-template-columns: 3fr 2fr; } }
+@media (min-width: 992px) { #view-scoreboard .split-viewport { grid-template-columns: 7fr 2fr; } }
 #panel-campers table { text-align: start; }
 
 /* Interactive Table spreadsheet layouts component metrics structural configurations */
